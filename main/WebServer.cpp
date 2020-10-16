@@ -367,7 +367,14 @@ namespace http
 
 			m_pWebEm->RegisterActionCode("uploadfloorplanimage", [this](auto&& session, auto&& req, auto&& redirect_uri) { UploadFloorplanImage(session, req, redirect_uri); });
 
-			m_pWebEm->RegisterActionCode("setopenthermsettings", [this](auto&& session, auto&& req, auto&& redirect_uri) { SetOpenThermSettings(session, req, redirect_uri); });
+			// WebServer call that are part of the Domoticz OpenAPI spec
+			m_pWebEm->RegisterPageCode("/api", [this](auto&& session, auto&& req, auto&& redirect_uri) { GetApiPage(session, req, redirect_uri); });
+			RegisterCommandCode("getappstatus", [this](auto&& session, auto&& req, auto&& redirect_uri) { Cmd_GetAppStatus(session, req, redirect_uri); });
+			// End of the OpenAPI list
+
+			m_pWebEm->RegisterActionCode("setopenthermsettings", [this](auto &&session, auto &&req, auto &&redirect_uri) { SetOpenThermSettings(session, req, redirect_uri); });
+			RegisterCommandCode(
+				"sendopenthermcommand", [this](auto&& session, auto&& req, auto&& root) { Cmd_SendOpenThermCommand(session, req, root); }, true);
 
 			m_pWebEm->RegisterActionCode("reloadpiface", [this](auto&& session, auto&& req, auto&& redirect_uri) { ReloadPiFace(session, req, redirect_uri); });
 			m_pWebEm->RegisterActionCode("restoredatabase", [this](auto&& session, auto&& req, auto&& redirect_uri) { RestoreDatabase(session, req, redirect_uri); });
@@ -893,7 +900,52 @@ namespace http
 			root["status"] = "OK";
 		}
 
+<<<<<<< HEAD
 		void CWebServer::Cmd_GetLanguages(WebEmSession& session, const request& req, Json::Value& root)
+=======
+		// Start OpenAPI specified 
+
+		void CWebServer::GetApiPage(WebEmSession &session, const request &req, reply &rep)
+		{
+			Json::Value root;
+			reply::status_type rStatus = reply::not_found;
+			std::string sCommand;
+		
+			root["status"] = "ERR";
+
+			root["uri"] = req.uri;
+			root["method"] = req.method;
+			//root["header"] = std::string(req.headers.data());
+
+			// Build the command based on the uri
+			sCommand = "getappstatus";
+
+			_log.Debug(DEBUG_WEBSERVER,"Handling /API for (%s) %s -> %s", root["method"].asString().c_str(), root["uri"].asString().c_str(), sCommand.c_str());
+
+			std::map < std::string, webserver_response_function >::iterator pf = m_webcommands.find(sCommand);
+			if (pf != m_webcommands.end())
+			{
+				pf->second(session, req, root);
+				rStatus = reply::created;
+			}
+
+			reply::set_content(&rep, root.toStyledString());
+			rep.status = rStatus;
+			return;
+		}
+
+		void CWebServer::Cmd_GetAppStatus(WebEmSession &session, const request &req, Json::Value &root)
+		{
+			std::string sValue;
+			root["status"] = "OK";
+			root["title"] = "GetAppStatus";
+			root["tbd"] = "tbd";
+		}
+
+		// End OpenAPI Specified
+
+		void CWebServer::Cmd_GetLanguage(WebEmSession &session, const request &req, Json::Value &root)
+>>>>>>> 874f2be74... Allow for dynamic path processing of /api/*
 		{
 			root["title"] = "GetLanguages";
 			std::string sValue;
