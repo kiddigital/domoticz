@@ -338,6 +338,11 @@ namespace http {
 
 			m_pWebEm->RegisterActionCode("uploadfloorplanimage", [this](auto &&session, auto &&req, auto &&redirect_uri) { UploadFloorplanImage(session, req, redirect_uri); });
 
+			// WebServer call that are part of the Domoticz OpenAPI spec
+			m_pWebEm->RegisterPageCode("/api", std::bind(&CWebServer::GetApiPage, this, _1, _2, _3));
+			RegisterCommandCode("getappstatus", std::bind(&CWebServer::Cmd_GetAppStatus, this, _1, _2, _3), true);
+			// End of the OpenAPI list
+
 			m_pWebEm->RegisterActionCode("setopenthermsettings", [this](auto &&session, auto &&req, auto &&redirect_uri) { SetOpenThermSettings(session, req, redirect_uri); });
 			RegisterCommandCode("sendopenthermcommand", [this](auto &&session, auto &&req, auto &&root) { Cmd_SendOpenThermCommand(session, req, root); }, true);
 
@@ -862,6 +867,47 @@ namespace http {
 			}
 			reply::set_content(&rep, "var data=" + root.toStyledString() + '\n' + jcallback + "(data);");
 		}
+
+		// Start OpenAPI specified 
+
+		void CWebServer::GetApiPage(WebEmSession & session, const request& req, reply & rep)
+		{
+			Json::Value root;
+			reply::status_type rStatus = reply::not_found;
+			std::string sCommand;
+		
+			root["status"] = "ERR";
+
+			root["uri"] = req.uri;
+			root["method"] = req.method;
+			//root["header"] = std::string(req.headers.data());
+
+			// Build the command based on the uri
+			sCommand = "getappstatus";
+
+			_log.Debug(DEBUG_WEBSERVER,"Handling /API for (%s) %s -> %s", root["method"].asString().c_str(), root["uri"].asString().c_str(), sCommand.c_str());
+
+			std::map < std::string, webserver_response_function >::iterator pf = m_webcommands.find(sCommand);
+			if (pf != m_webcommands.end())
+			{
+				pf->second(session, req, root);
+				rStatus = reply::created;
+			}
+
+			reply::set_content(&rep, root.toStyledString());
+			rep.status = rStatus;
+			return;
+		}
+
+		void CWebServer::Cmd_GetAppStatus(WebEmSession & session, const request& req, Json::Value &root)
+		{
+			std::string sValue;
+			root["status"] = "OK";
+			root["title"] = "GetAppStatus";
+			root["tbd"] = "tbd";
+		}
+
+		// End OpenAPI Specified
 
 		void CWebServer::Cmd_GetLanguage(WebEmSession & session, const request& req, Json::Value &root)
 		{

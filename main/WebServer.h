@@ -86,6 +86,9 @@ class CWebServer : public session_store, public std::enable_shared_from_this<CWe
 			    const std::string &floorID, bool bDisplayHidden, bool bDisplayDisabled, bool bFetchFavorites, time_t LastUpdate, const std::string &username,
 			    const std::string &hardwareid = ""); // OTO
 
+	// OpenAPI specified startingpoint
+	void GetApiPage(WebEmSession & session, const request& req, reply & rep);
+
 	// SessionStore interface
 	WebEmStoredSession GetSession(const std::string &sessionId) override;
 	void StoreSession(const WebEmStoredSession & session) override;
@@ -290,6 +293,9 @@ private:
 #ifdef ENABLE_PYTHON
 	void PluginLoadConfig();
 #endif
+
+	// OpenAPI specified
+	void Cmd_GetAppStatus(WebEmSession & session, const request& req, Json::Value &root);
 
 	//RTypes
 	void RType_HandleGraph(WebEmSession & session, const request& req, Json::Value &root);
