@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "WebServer.h"
 #include "WebServerHelper.h"
+#include "WebServerOpenAPI.h"
 #include <iostream>
 #include <fstream>
 #include <stdarg.h>
@@ -117,7 +118,7 @@ namespace http
 			m_failcount = 0;
 		}
 
-		CWebServer::~CWebServer()
+		CWebServer::~CWebServer(void)
 		{
 			// RK, we call StopServer() instead of just deleting m_pWebEm. The Do_Work thread might still be accessing that object
 			StopServer();
@@ -277,6 +278,7 @@ namespace http
 				{
 					exception = false;
 					m_pWebEm = new http::server::cWebem(settings, serverpath);
+					m_pWebOpenAPI = new CWebServerOpenAPI();
 				}
 				catch (std::exception& e)
 				{
@@ -368,8 +370,8 @@ namespace http
 			m_pWebEm->RegisterActionCode("uploadfloorplanimage", [this](auto&& session, auto&& req, auto&& redirect_uri) { UploadFloorplanImage(session, req, redirect_uri); });
 
 			// WebServer call that are part of the Domoticz OpenAPI spec
-			m_pWebEm->RegisterPageCode("/api", [this](auto&& session, auto&& req, auto&& redirect_uri) { GetApiPage(session, req, redirect_uri); });
-			RegisterCommandCode("getappstatus", [this](auto&& session, auto&& req, auto&& redirect_uri) { Cmd_GetAppStatus(session, req, redirect_uri); });
+			m_pWebEm->RegisterPageCode("/api", [this](auto &&session, auto &&req, auto &&rep) { GetApiPage (session, req, rep); });
+			RegisterCommandCode("getappstatus", [this](auto &&session, auto &&req, auto &&root) { Cmd_GetAppStatus(session, req, root); }, true);
 			// End of the OpenAPI list
 
 			m_pWebEm->RegisterActionCode("setopenthermsettings", [this](auto &&session, auto &&req, auto &&redirect_uri) { SetOpenThermSettings(session, req, redirect_uri); });
@@ -697,7 +699,9 @@ namespace http
 					m_thread.reset();
 				}
 				delete m_pWebEm;
-				m_pWebEm = nullptr;
+				m_pWebEm = NULL;
+				delete m_pWebOpenAPI;
+				m_pWebOpenAPI = NULL;
 			}
 			catch (...)
 			{
@@ -908,25 +912,30 @@ namespace http
 		void CWebServer::GetApiPage(WebEmSession &session, const request &req, reply &rep)
 		{
 			Json::Value root;
-			reply::status_type rStatus = reply::not_found;
-			std::string sCommand;
-		
-			root["status"] = "ERR";
 
-			root["uri"] = req.uri;
-			root["method"] = req.method;
-			//root["header"] = std::string(req.headers.data());
+			//_log.Debug(DEBUG_WEBSERVER,"Handling /API for (%s) %s", req.method.c_str(), req.uri.c_str());
 
-			// Build the command based on the uri
-			sCommand = "getappstatus";
-
-			_log.Debug(DEBUG_WEBSERVER,"Handling /API for (%s) %s -> %s", root["method"].asString().c_str(), root["uri"].asString().c_str(), sCommand.c_str());
-
-			std::map < std::string, webserver_response_function >::iterator pf = m_webcommands.find(sCommand);
-			if (pf != m_webcommands.end())
+			if (m_pWebOpenAPI != NULL)
 			{
-				pf->second(session, req, root);
-				rStatus = reply::created;
+				try
+				{
+					if(!m_pWebOpenAPI->HandleRequest(req.method, req.uri, root))
+					{
+						rep.status = reply::not_found;
+						return;
+					}
+				}
+				catch(const std::exception& e)
+				{
+					_log.Debug(DEBUG_WEBSERVER, "WebServerOpenAPI crashed: %s", e.what());
+					rep.status = reply::internal_server_error;
+					return;
+				}
+			}
+			else
+			{
+				rep.status = reply::service_unavailable;
+				return;
 			}
 
 			reply::set_content(&rep, root.toStyledString());

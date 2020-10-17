@@ -752,6 +752,7 @@
     <ClInclude Include="..\main\unzip_iterator.h" />
     <ClInclude Include="..\main\unzip_stream.h" />
     <ClInclude Include="..\main\WebServerHelper.h" />
+    <ClInclude Include="..\main\WebServerOpenAPI.h" />
     <ClInclude Include="..\notifications\NotificationBase.h" />
     <ClInclude Include="..\notifications\NotificationBrowser.h" />
     <ClInclude Include="..\notifications\NotificationFCM.h" />
@@ -1063,6 +1064,7 @@
     <ClCompile Include="..\main\SunRiseSet.cpp" />
     <ClCompile Include="..\main\TrendCalculator.cpp" />
     <ClCompile Include="..\main\WebServerHelper.cpp" />
+    <ClCompile Include="..\main\WebServerOpenAPI.cpp" />
     <ClCompile Include="..\main\WindCalculation.cpp" />
     <ClCompile Include="..\notifications\NotificationBase.cpp" />
     <ClCompile Include="..\notifications\NotificationBrowser.cpp" />
