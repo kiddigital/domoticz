@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include "WebServerOpenAPI.h"
 #include "../webserver/cWebem.h"
 #include "../webserver/request.hpp"
 #include "../webserver/session_store.hpp"
@@ -68,6 +69,7 @@ class CWebServer : public session_store, public std::enable_shared_from_this<CWe
 	void EventCreate(WebEmSession & session, const request& req, std::string & redirect_uri);
 
 	cWebem *m_pWebEm;
+	CWebServerOpenAPI *m_pWebOpenAPI;
 
 	void ReloadCustomSwitchIcons();
 
@@ -293,9 +295,6 @@ private:
 #ifdef ENABLE_PYTHON
 	void PluginLoadConfig();
 #endif
-
-	// OpenAPI specified
-	void Cmd_GetAppStatus(WebEmSession & session, const request& req, Json::Value &root);
 
 	//RTypes
 	void RType_HandleGraph(WebEmSession & session, const request& req, Json::Value &root);

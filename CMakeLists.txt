@@ -165,6 +165,7 @@ main/SunRiseSet.cpp
 main/TrendCalculator.cpp
 main/WebServer.cpp
 main/WebServerHelper.cpp
+main/WebServerOpenAPI.cpp
 main/WindCalculation.cpp
 push/BasePush.cpp
 push/FibaroPush.cpp

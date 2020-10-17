@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "WebServer.h"
 #include "WebServerHelper.h"
+#include "WebServerOpenAPI.h"
 #include <iostream>
 #include <fstream>
 #include <stdarg.h>
@@ -115,7 +116,7 @@ namespace http {
 #endif
 		}
 
-		CWebServer::~CWebServer()
+		CWebServer::~CWebServer(void)
 		{
 			// RK, we call StopServer() instead of just deleting m_pWebEm. The Do_Work thread might still be accessing that object
 			StopServer();
@@ -252,11 +253,12 @@ namespace http {
 			int tries = 0;
 			bool exception = false;
 
-			//_log.Log(LOG_STATUS, "CWebServer::StartServer() : settings : %s", settings.to_string().c_str());
+			_log.Debug(DEBUG_WEBSERVER, "CWebServer::StartServer() : settings : %s", settings.to_string().c_str());
 			do {
 				try {
 					exception = false;
 					m_pWebEm = new http::server::cWebem(settings, serverpath);
+					m_pWebOpenAPI = new CWebServerOpenAPI();
 				}
 				catch (std::exception& e) {
 					exception = true;
@@ -338,10 +340,15 @@ namespace http {
 
 			m_pWebEm->RegisterActionCode("uploadfloorplanimage", [this](auto &&session, auto &&req, auto &&redirect_uri) { UploadFloorplanImage(session, req, redirect_uri); });
 
+<<<<<<< HEAD
 			// WebServer call that are part of the Domoticz OpenAPI spec
 			m_pWebEm->RegisterPageCode("/api", std::bind(&CWebServer::GetApiPage, this, _1, _2, _3));
 			RegisterCommandCode("getappstatus", std::bind(&CWebServer::Cmd_GetAppStatus, this, _1, _2, _3), true);
 			// End of the OpenAPI list
+=======
+			// WebServer call that handles the part under the Domoticz OpenAPI spec
+			m_pWebEm->RegisterPageCode("/api", boost::bind(&CWebServer::GetApiPage, this, _1, _2, _3));
+>>>>>>> 3f41bdfe6... Added new OpenAPI class to WebServer
 
 			m_pWebEm->RegisterActionCode("setopenthermsettings", [this](auto &&session, auto &&req, auto &&redirect_uri) { SetOpenThermSettings(session, req, redirect_uri); });
 			RegisterCommandCode("sendopenthermcommand", [this](auto &&session, auto &&req, auto &&root) { Cmd_SendOpenThermCommand(session, req, root); }, true);
@@ -678,7 +685,9 @@ namespace http {
 					m_thread.reset();
 				}
 				delete m_pWebEm;
-				m_pWebEm = nullptr;
+				m_pWebEm = NULL;
+				delete m_pWebOpenAPI;
+				m_pWebOpenAPI = NULL;
 			}
 			catch (...)
 			{
@@ -868,46 +877,45 @@ namespace http {
 			reply::set_content(&rep, "var data=" + root.toStyledString() + '\n' + jcallback + "(data);");
 		}
 
-		// Start OpenAPI specified 
-
 		void CWebServer::GetApiPage(WebEmSession & session, const request& req, reply & rep)
 		{
 			Json::Value root;
-			reply::status_type rStatus = reply::not_found;
-			std::string sCommand;
-		
-			root["status"] = "ERR";
 
-			root["uri"] = req.uri;
-			root["method"] = req.method;
-			//root["header"] = std::string(req.headers.data());
+			//_log.Debug(DEBUG_WEBSERVER,"Handling /API for (%s) %s", req.method.c_str(), req.uri.c_str());
 
-			// Build the command based on the uri
-			sCommand = "getappstatus";
-
-			_log.Debug(DEBUG_WEBSERVER,"Handling /API for (%s) %s -> %s", root["method"].asString().c_str(), root["uri"].asString().c_str(), sCommand.c_str());
-
-			std::map < std::string, webserver_response_function >::iterator pf = m_webcommands.find(sCommand);
-			if (pf != m_webcommands.end())
+			if (m_pWebOpenAPI != NULL)
 			{
-				pf->second(session, req, root);
-				rStatus = reply::created;
+				try
+				{
+					if(!m_pWebOpenAPI->HandleRequest(req.method, req.uri, root))
+					{
+						rep.status = reply::not_found;
+						return;
+					}
+				}
+				catch(const std::exception& e)
+				{
+					_log.Debug(DEBUG_WEBSERVER, "WebServerOpenAPI crashed: %s", e.what());
+					rep.status = reply::internal_server_error;
+					return;
+				}
+			}
+			else
+			{
+				rep.status = reply::service_unavailable;
+				return;
 			}
 
-			reply::set_content(&rep, root.toStyledString());
-			rep.status = rStatus;
-			return;
+			if (!root.empty())
+			{
+				reply::set_content(&rep, root.toStyledString());
+				rep.status = reply::ok;
+			}
+			else
+			{
+				rep.status = reply::no_content;
+			}
 		}
-
-		void CWebServer::Cmd_GetAppStatus(WebEmSession & session, const request& req, Json::Value &root)
-		{
-			std::string sValue;
-			root["status"] = "OK";
-			root["title"] = "GetAppStatus";
-			root["tbd"] = "tbd";
-		}
-
-		// End OpenAPI Specified
 
 		void CWebServer::Cmd_GetLanguage(WebEmSession & session, const request& req, Json::Value &root)
 		{
