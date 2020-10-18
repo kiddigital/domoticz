@@ -9,60 +9,64 @@ License: Public domain
 
 ************************************************************************/
 #include "stdafx.h"
-#include "WebServerOpenAPI.h"
+#include "WebServerOpenAPI_v2.h"
 #include "../../main/Logger.h"
 #include "../../main/json_helper.h"
-//#include "../../main/Helper.h"
-//#include "../../httpclient/UrlEncode.h"
-//#include "../../httpclient/HTTPClient.h"
-//#include "../../main/SQLHelper.h"
-//#include "../../webserver/Base64.h"
 #include <sstream>
 #include <iomanip>
 #include <boost/bind.hpp>
 
 #define TESTDEFINE "testing123"
 
-CWebServerOpenAPI::CWebServerOpenAPI()
+CWebServerOpenAPI_v2::CWebServerOpenAPI_v2()
 {
-	Init();
+	gInit();
 
 	// List of the commands available to register with their command name
 	// NOTE: make sure the request method (GET, POST, DELETE, etc) is written in CAPS and the rest in lowercase!
-	RegisterCommand("GETcustomdata", boost::bind(&CWebServerOpenAPI::GetCustomData, this, _1, _2));
+	gRegisterCommand("GETcustomdata", boost::bind(&CWebServerOpenAPI_v2::GetCustomData, this, _1, _2));
+	gRegisterCommand("POSTcustomdata", boost::bind(&CWebServerOpenAPI_v2::PostCustomData, this, _1, _2));
 }
 
-CWebServerOpenAPI::~CWebServerOpenAPI()
+CWebServerOpenAPI_v2::~CWebServerOpenAPI_v2()
 {
 }
 
-bool CWebServerOpenAPI::HandleRequest(const std::string method, const std::string uri, Json::Value& root)
+/* *********************
+ * The generic function to handle incoming requests
+ **********************/
+
+bool CWebServerOpenAPI_v2::gHandleRequest(const std::string method, const std::string uri, std::multimap<std::__cxx11::string, std::__cxx11::string> parameters, Json::Value& root)
 {
 	Json::Value result;
 
 	_log.Debug(DEBUG_WEBSERVER, "WebServerOpenAPI: Handling request (%s) %s", method.c_str(), uri.c_str());
 
-	Init();
+	gInit();
 
-	if (!ParseURI(uri))
+	if (!gParseURI(uri))
 		return false;
 
 	// Add method to command
 	m_command = method + m_command;
 	m_altcommand = method + m_altcommand;
 
+	// show content:
+	for (std::multimap<std::__cxx11::string,std::__cxx11::string>::iterator it=parameters.begin(); it!=parameters.end(); ++it)
+		_log.Debug(DEBUG_NORM, "Debugging parameters %s => %s", (*it).first.c_str(), (*it).second.c_str());
+	
 	// Execute command if found
-	if (FindCommand(m_command))
+	if (gFindCommand(m_command))
 	{
-		if(!HandleCommand(m_command, m_params, result))
+		if(!gHandleCommand(m_command, m_params, result))
 		{
 			return false;
 		}
 	} // Command not found, try the alternative one
-	else if (FindCommand(m_altcommand))
+	else if (gFindCommand(m_altcommand))
 	{
 		m_params = "uriparam=" + m_altparams + "&" + m_params;
-		if(!HandleCommand(m_altcommand, m_params, result))
+		if(!gHandleCommand(m_altcommand, m_params, result))
 		{
 			return false;
 		}
@@ -87,7 +91,7 @@ bool CWebServerOpenAPI::HandleRequest(const std::string method, const std::strin
 	return true;
 }
 
-void CWebServerOpenAPI::Init()
+void CWebServerOpenAPI_v2::gInit()
 {
 	m_httpcode = 0;
 	m_uri = "";
@@ -99,13 +103,13 @@ void CWebServerOpenAPI::Init()
 	m_resultjson.clear();
 }
 
-bool CWebServerOpenAPI::ParseURI(const std::string uri)
+bool CWebServerOpenAPI_v2::gParseURI(const std::string uri)
 {
 	std::string path = uri;
 	std::string params;
 	size_t paramPos = uri.find_first_of('?');
 
-	if (!(uri.find("/api/") == 0))
+	if (!(uri.find("/api/v2/") == 0))
 	{
 		return false;
 	}
@@ -116,7 +120,7 @@ bool CWebServerOpenAPI::ParseURI(const std::string uri)
 	}
 
 	m_uri = uri;
-	m_path = path.substr(5); 		// And strip the first 5 chars
+	m_path = path.substr(8); 		// And strip the first 8 chars (/api/v2/)
 	m_params = params;
 
 	// Build command
@@ -147,18 +151,18 @@ bool CWebServerOpenAPI::ParseURI(const std::string uri)
 	return true;
 }
 
-void CWebServerOpenAPI::RegisterCommand(const char* command, openapi_command_function CommandFunction)
+void CWebServerOpenAPI_v2::gRegisterCommand(const char* command, openapi_command_function CommandFunction)
 {
 	m_openapicommands.insert(std::pair<std::string, openapi_command_function >(std::string(command), CommandFunction));
 }
 
-bool CWebServerOpenAPI::FindCommand(const std::string& command)
+bool CWebServerOpenAPI_v2::gFindCommand(const std::string& command)
 {
 	std::map < std::string, openapi_command_function >::iterator pf = m_openapicommands.find(command);
 	return (pf != m_openapicommands.end() ? true : false);
 }
 
-bool CWebServerOpenAPI::HandleCommand(const std::string& command, const std::string& params, Json::Value& result)
+bool CWebServerOpenAPI_v2::gHandleCommand(const std::string& command, const std::string& params, Json::Value& result)
 {
 	std::map < std::string, openapi_command_function >::iterator pf = m_openapicommands.find(command);
 	if (pf != m_openapicommands.end())
@@ -169,11 +173,26 @@ bool CWebServerOpenAPI::HandleCommand(const std::string& command, const std::str
 	return false;
 }
 
-bool CWebServerOpenAPI::GetCustomData(const std::string& params, Json::Value& result)
+/* *********************
+ * Below here the implementations of the specific methods supported with Domoticz 2nd version of the API service
+ **********************/
+
+bool CWebServerOpenAPI_v2::GetCustomData(const std::string& params, Json::Value& result)
 {
 	bool bSuccess = false;
 
 	result["data"] = TESTDEFINE;
+	result["params"] = params;
+	bSuccess = true;
+
+	return bSuccess;
+}
+
+bool CWebServerOpenAPI_v2::PostCustomData(const std::string& params, Json::Value& result)
+{
+	bool bSuccess = false;
+
+	result["post"] = TESTDEFINE;
 	result["params"] = params;
 	bSuccess = true;
 

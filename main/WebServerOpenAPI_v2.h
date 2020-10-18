@@ -12,20 +12,20 @@ License: Public domain
 #include <string>
 #include <boost/function.hpp>
 
-class CWebServerOpenAPI
+class CWebServerOpenAPI_v2
 {
 	typedef boost::function< void(const std::string& params, Json::Value &result) > openapi_command_function;
 public:
-	CWebServerOpenAPI();
-	~CWebServerOpenAPI(void);
+	CWebServerOpenAPI_v2();
+	~CWebServerOpenAPI_v2(void);
 
-	bool HandleRequest(const std::string method, const std::string uri, Json::Value& root);
+	bool gHandleRequest(const std::string method, const std::string uri, std::multimap<std::__cxx11::string, std::__cxx11::string> parameters, Json::Value& root);
 private:
-	void Init();
-	bool ParseURI(const std::string uri);
-	void RegisterCommand(const char* command, openapi_command_function CommandFunction);
-	bool FindCommand(const std::string& command);
-	bool HandleCommand(const std::string& command, const std::string& params, Json::Value& result);
+	void gInit();
+	bool gParseURI(const std::string uri);
+	void gRegisterCommand(const char* command, openapi_command_function CommandFunction);
+	bool gFindCommand(const std::string& command);
+	bool gHandleCommand(const std::string& command, const std::string& params, Json::Value& result);
 
 	std::map < std::string, openapi_command_function > m_openapicommands;
 
@@ -41,4 +41,5 @@ private:
 	// List of OpenAPI supported commands
 	// Make sure they also get registered in the class constructor! 
 	bool GetCustomData(const std::string& params, Json::Value& result);
+	bool PostCustomData(const std::string& params, Json::Value& result);
 };
