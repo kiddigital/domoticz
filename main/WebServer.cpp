@@ -1,7 +1,9 @@
 #include "stdafx.h"
 #include "WebServer.h"
 #include "WebServerHelper.h"
-#include "WebServerOpenAPI.h"
+#include "WebServerOpenAPI_v2.h"
+//#include "WebServerOpenAPI_v3.h"
+#include <boost/bind/bind.hpp>
 #include <iostream>
 #include <fstream>
 #include <stdarg.h>
@@ -278,7 +280,8 @@ namespace http
 				{
 					exception = false;
 					m_pWebEm = new http::server::cWebem(settings, serverpath);
-					m_pWebOpenAPI = new CWebServerOpenAPI();
+					m_pWebOpenAPI_v2 = new CWebServerOpenAPI_v2();
+					//m_pWebOpenAPI_v3 = new CWebServerOpenAPI_v3();
 				}
 				catch (std::exception& e)
 				{
@@ -700,8 +703,10 @@ namespace http
 				}
 				delete m_pWebEm;
 				m_pWebEm = NULL;
-				delete m_pWebOpenAPI;
-				m_pWebOpenAPI = NULL;
+				delete m_pWebOpenAPI_v2;
+				m_pWebOpenAPI_v2 = NULL;
+				//delete m_pWebOpenAPI_v3;
+				//m_pWebOpenAPI_v3 = NULL;
 			}
 			catch (...)
 			{
@@ -915,26 +920,64 @@ namespace http
 
 			//_log.Debug(DEBUG_WEBSERVER,"Handling /API for (%s) %s", req.method.c_str(), req.uri.c_str());
 
-			if (m_pWebOpenAPI != NULL)
+			// Check version, handle v2
+			if (req.uri.find("/api/v2/") == 0)
 			{
-				try
+				if (m_pWebOpenAPI_v2 != NULL)
 				{
-					if(!m_pWebOpenAPI->HandleRequest(req.method, req.uri, root))
+					try
 					{
-						rep.status = reply::not_found;
+						if(!m_pWebOpenAPI_v2->gHandleRequest(req.method, req.uri, req.parameters, root))
+						{
+							rep.status = reply::not_found;
+							return;
+						}
+					}
+					catch(const std::exception& e)
+					{
+						_log.Debug(DEBUG_WEBSERVER, "WebServerOpenAPI_v2 crashed: %s", e.what());
+						rep.status = reply::internal_server_error;
 						return;
 					}
 				}
-				catch(const std::exception& e)
+				else
 				{
-					_log.Debug(DEBUG_WEBSERVER, "WebServerOpenAPI crashed: %s", e.what());
-					rep.status = reply::internal_server_error;
+					rep.status = reply::service_unavailable;
 					return;
 				}
 			}
-			else
+
+			/* // Here we could handle v3 once it is there, etc.
+			else if (req.uri.find("/api/v3/") == 0)
 			{
-				rep.status = reply::service_unavailable;
+				if (m_pWebOpenAPI_v3 != NULL)
+				{
+					try
+					{
+						if(!m_pWebOpenAPI_v3->HandleRequest(req.method, req.uri, req.parameters, root))
+						{
+							rep.status = reply::not_found;
+							return;
+						}
+					}
+					catch(const std::exception& e)
+					{
+						_log.Debug(DEBUG_WEBSERVER, "WebServerOpenAPI_v3 crashed: %s", e.what());
+						rep.status = reply::internal_server_error;
+						return;
+					}
+				}
+				else
+				{
+					rep.status = reply::service_unavailable;
+					return;
+				}
+			}
+			*/ // The above would be useable with a v3 version
+
+			else	// So we have an unknown/unhandled version, return 404
+			{
+				rep.status = reply::not_found;
 				return;
 			}
 

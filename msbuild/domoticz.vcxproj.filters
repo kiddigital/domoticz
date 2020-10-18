@@ -1775,7 +1775,7 @@
     <ClInclude Include="..\main\WebServerHelper.h">
       <Filter>Webserver</Filter>
     </ClInclude>
-    <ClInclude Include="..\main\WebServerOpenAPI.h">
+    <ClInclude Include="..\main\WebServerOpenAPI_v2.h">
       <Filter>Webserver</Filter>
     </ClInclude>
     <ClInclude Include="..\hardware\KMTronic433.h">
@@ -2542,7 +2542,7 @@
     <ClCompile Include="..\main\WebServerHelper.cpp">
       <Filter>Webserver</Filter>
     </ClCompile>
-    <ClCompile Include="..\main\WebServerOpenAPI.cpp">
+    <ClCompile Include="..\main\WebServerOpenAPI_v2.cpp">
       <Filter>Webserver</Filter>
     </ClCompile>
     <ClCompile Include="..\hardware\Pinger.cpp">
