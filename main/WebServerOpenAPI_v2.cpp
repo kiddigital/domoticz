@@ -10,8 +10,12 @@ License: Public domain
 ************************************************************************/
 #include "stdafx.h"
 #include "WebServerOpenAPI_v2.h"
-#include "../../main/Logger.h"
-#include "../../main/json_helper.h"
+#include "Logger.h"
+#include "json_helper.h"
+#include "Helper.h"
+#include "SQLHelper.h"
+#include "mainworker.h"
+#include "../webserver/reply.hpp"
 #include <sstream>
 #include <iomanip>
 #include <boost/bind.hpp>
@@ -26,6 +30,8 @@ CWebServerOpenAPI_v2::CWebServerOpenAPI_v2()
 	// NOTE: make sure the request method (GET, POST, DELETE, etc) is written in CAPS and the rest in lowercase!
 	gRegisterCommand("GETcustomdata", boost::bind(&CWebServerOpenAPI_v2::GetCustomData, this, _1, _2));
 	gRegisterCommand("POSTcustomdata", boost::bind(&CWebServerOpenAPI_v2::PostCustomData, this, _1, _2));
+	gRegisterCommand("GETdevice", boost::bind(&CWebServerOpenAPI_v2::GetDevice, this, _1, _2));
+	gRegisterCommand("GETweatherforecastdata", boost::bind(&CWebServerOpenAPI_v2::GetWeatherForecastdata, this, _1, _2));
 }
 
 CWebServerOpenAPI_v2::~CWebServerOpenAPI_v2()
@@ -33,12 +39,14 @@ CWebServerOpenAPI_v2::~CWebServerOpenAPI_v2()
 }
 
 /* *********************
- * The generic function to handle incoming requests
+ * The generic (helper) functions to handle incoming requests
  **********************/
 
 bool CWebServerOpenAPI_v2::gHandleRequest(const std::string method, const std::string uri, std::multimap<std::__cxx11::string, std::__cxx11::string> parameters, Json::Value& root)
 {
 	Json::Value result;
+	Json::Value input;
+	bool bAltExec = false;
 
 	_log.Debug(DEBUG_WEBSERVER, "WebServerOpenAPI: Handling request (%s) %s", method.c_str(), uri.c_str());
 
@@ -51,22 +59,27 @@ bool CWebServerOpenAPI_v2::gHandleRequest(const std::string method, const std::s
 	m_command = method + m_command;
 	m_altcommand = method + m_altcommand;
 
-	// show content:
+	// Get all parameters, noth query string AND (POST, PUT, etc.) body
 	for (std::multimap<std::__cxx11::string,std::__cxx11::string>::iterator it=parameters.begin(); it!=parameters.end(); ++it)
-		_log.Debug(DEBUG_NORM, "Debugging parameters %s => %s", (*it).first.c_str(), (*it).second.c_str());
+	{
+		_log.Debug(DEBUG_WEBSERVER, "Debugging parameters %s => %s", (*it).first.c_str(), (*it).second.c_str());
+		input[(*it).first] = (*it).second;
+	}
 	
 	// Execute command if found
 	if (gFindCommand(m_command))
 	{
-		if(!gHandleCommand(m_command, m_params, result))
+		if(!gHandleCommand(m_command, input, result))
 		{
 			return false;
 		}
 	} // Command not found, try the alternative one
 	else if (gFindCommand(m_altcommand))
 	{
-		m_params = "uriparam=" + m_altparams + "&" + m_params;
-		if(!gHandleCommand(m_altcommand, m_params, result))
+		bAltExec = true;
+		input["_uriparam"] = m_altparams;
+		m_params = "_uriparam=" + m_altparams + "&" + m_params;
+		if(!gHandleCommand(m_altcommand, input, result))
 		{
 			return false;
 		}
@@ -78,22 +91,33 @@ bool CWebServerOpenAPI_v2::gHandleRequest(const std::string method, const std::s
 
 	if (!result.empty())
 	{
+		root["command"] = m_command;
+		if (bAltExec)
+			root["command"] = m_altcommand;
 		root["result"] = result;
 	}
 
+	/*
 	root["uri"] = m_uri;
 	root["path"] = m_path;
-	root["params"] = m_params;
-	root["command"] = m_command;
+	root["input"] = input;
 	root["altparams"] = m_altparams;
 	root["altcommand"] = m_altcommand;
+	*/
+
+	m_resultjson = root;
 
 	return true;
 }
 
+http::server::reply::status_type CWebServerOpenAPI_v2::gGetResultCode()
+{
+	return m_httpresult.status;
+}
+
 void CWebServerOpenAPI_v2::gInit()
 {
-	m_httpcode = 0;
+	m_httpresult.status = http::server::reply::not_found;
 	m_uri = "";
 	m_path = "";
 	m_params = "";
@@ -162,12 +186,12 @@ bool CWebServerOpenAPI_v2::gFindCommand(const std::string& command)
 	return (pf != m_openapicommands.end() ? true : false);
 }
 
-bool CWebServerOpenAPI_v2::gHandleCommand(const std::string& command, const std::string& params, Json::Value& result)
+bool CWebServerOpenAPI_v2::gHandleCommand(const std::string& command, const Json::Value& input, Json::Value& result)
 {
 	std::map < std::string, openapi_command_function >::iterator pf = m_openapicommands.find(command);
 	if (pf != m_openapicommands.end())
 	{
-		pf->second(params, result);
+		pf->second(input, result);
 		return true;
 	}
 	return false;
@@ -177,24 +201,67 @@ bool CWebServerOpenAPI_v2::gHandleCommand(const std::string& command, const std:
  * Below here the implementations of the specific methods supported with Domoticz 2nd version of the API service
  **********************/
 
-bool CWebServerOpenAPI_v2::GetCustomData(const std::string& params, Json::Value& result)
+void CWebServerOpenAPI_v2::GetCustomData(const Json::Value& input, Json::Value& result)
 {
-	bool bSuccess = false;
-
 	result["data"] = TESTDEFINE;
-	result["params"] = params;
-	bSuccess = true;
-
-	return bSuccess;
+	result["params"] = input;
 }
 
-bool CWebServerOpenAPI_v2::PostCustomData(const std::string& params, Json::Value& result)
+void CWebServerOpenAPI_v2::PostCustomData(const Json::Value& input, Json::Value& result)
 {
-	bool bSuccess = false;
-
 	result["post"] = TESTDEFINE;
-	result["params"] = params;
-	bSuccess = true;
+	result["params"] = input;
+}
 
-	return bSuccess;
+void CWebServerOpenAPI_v2::GetDevice(const Json::Value& input, Json::Value& result)
+{
+	int iDeviceIDX;
+
+	iDeviceIDX = atoi(input["_uriparam"].asString().c_str());
+	if (iDeviceIDX > 0)
+	{
+		std::vector<std::vector<std::string> > qresult;
+		qresult = m_sql.safe_query("SELECT ID, Name, HardwareID, DeviceID, Unit, Type, SubType, nValue, sValue, LastUpdate FROM DeviceStatus WHERE (ID=%d)", iDeviceIDX);
+		if (!qresult.empty())
+		{
+			result["ID"] = qresult[0].at(0);
+			result["Name"] = qresult[0].at(1);
+			result["HardwareID"] = qresult[0].at(2);
+			result["DeviceID"] = qresult[0].at(3);
+			result["Unit"] = qresult[0].at(4);
+			result["Type"] = qresult[0].at(5);
+			result["SubType"] = qresult[0].at(6);
+			result["nValue"] = qresult[0].at(7);
+			result["sValue"] = qresult[0].at(8);
+			result["LastUpdate"] = qresult[0].at(9);
+		}
+		else
+		{
+			m_httpresult.status = http::server::reply::not_found;
+		}
+	}
+}
+
+void CWebServerOpenAPI_v2::GetWeatherForecastdata(const Json::Value& input, Json::Value& result)
+{
+	result["function"] = "GetWeatherForecastdata";
+	result["params"] = input;
+
+	std::string Latitude = "1";
+	std::string Longitude = "1";
+	std::string sValue;
+	if (m_sql.GetPreferencesVar("Location", sValue))
+	{
+		std::vector<std::string> strarray;
+		StringSplit(sValue, ";", strarray);
+
+		if (strarray.size() == 2)
+		{
+			Latitude = strarray[0];
+			Longitude = strarray[1];
+		}
+	}
+	result["Latitude"] = Latitude;
+	result["Longitude"] = Longitude;
+
 }
