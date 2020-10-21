@@ -900,6 +900,10 @@ namespace http {
 							rep.status = reply::not_found;
 							return;
 						}
+						else
+						{
+							rep.status = m_pWebOpenAPI_v2->gGetResultCode();
+						}
 					}
 					catch(const std::exception& e)
 					{
