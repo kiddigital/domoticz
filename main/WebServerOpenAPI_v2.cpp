@@ -91,19 +91,14 @@ bool CWebServerOpenAPI_v2::gHandleRequest(const std::string method, const std::s
 
 	if (!result.empty())
 	{
+		/*
 		root["command"] = m_command;
 		if (bAltExec)
 			root["command"] = m_altcommand;
 		root["result"] = result;
+		*/
+		root = result;
 	}
-
-	/*
-	root["uri"] = m_uri;
-	root["path"] = m_path;
-	root["input"] = input;
-	root["altparams"] = m_altparams;
-	root["altcommand"] = m_altcommand;
-	*/
 
 	m_resultjson = root;
 
