@@ -1,0 +1,125 @@
+openapi: 3.0.0
+info:
+  title: Domoticz API webservice Version 2
+  description: |
+    This is the OpenAPI (3.0.0) specification for Domoticz
+    
+    The Domoticz webservice is a RESTfull API which can be comsumed by many different clients
+    and different kinds of clients (webapps, websites, proxies, mobile apps, etc.).
+
+    History:
+
+    - This 0.0.1 version is just a Proof of Concept
+
+    Note: the reason that this is called V2 (Version 2) is that the original webserver
+    implementation is considered V1. So all calls made to the webserver that do not have
+    v2 (or maybe higher in the future) can be seen as the 'old' (=current) way.
+  version: 0.0.1
+  contact:
+    name: Use the forum for all question
+    url: https://www.domoticz.com/forum/
+  license:
+      name: GPL-3.0 
+      url: https://github.com/domoticz/domoticz/blob/development/License.txt
+externalDocs:
+    description: See our Wiki for more details and documentation
+    url: https://www.domoticz.com/wiki/
+servers:
+  - url: http://localhost:8080/api/v2
+    description: Probably your 'development' environment server
+paths:
+  /device/{idx}:
+    get:
+      summary: Returns the device information for a given Domoticz device IDX
+      description: |
+        This method returns the detail information from a specific Domoticz device
+        if the device exists
+
+        The device details contain all relevant detail items that Domoticz has. Even
+        'hidden' devices (devices from inactive hardware) are returned
+      tags:
+        - Devices
+      parameters:
+        - in: path
+          name: idx
+          schema:
+            type: integer
+          required: true
+          description: Numeric Domoticz Device IDx of the device
+      responses:
+        '200':
+          description: An object containing all Device details
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Device' 
+        '404':
+          description: If a given device IDX does not exists
+    post:
+      summary: Updates the device information for a given Domoticz device IDX
+      description: |
+        This method updates the detail information from a specific Domoticz device
+        if the device exists
+      tags:
+        - Devices
+      parameters:
+        - in: path
+          name: idx
+          schema:
+            type: integer
+          required: true
+          description: Numeric Domoticz Device IDx of the device
+      responses:
+        '204':
+          description: An empty response meaning the update went OK
+        '400':
+          description: When the input is not as expected
+        '404':
+          description: If a given device IDX does not exists
+    delete:
+      summary: Deletes the devices as specified by the given Domoticz device IDX
+      description: |
+        This method deletes the given Domoticz device
+        if the device exists
+      tags:
+        - Devices
+      parameters:
+        - in: path
+          name: idx
+          schema:
+            type: integer
+          required: true
+          description: Numeric Domoticz Device IDx of the device
+      responses:
+        '204':
+          description: An empty response meaning the update went OK
+        '400':
+          description: When the input is not as expected
+        '404':
+          description: If a given device IDX does not exists
+  /weatherforecastdata:
+    get:
+      summary: Returns the information used by Domoticz Forecast screen
+      description: |
+        Some description
+      tags:
+        - Weather
+      responses:
+        '200':
+          description: All relevant forecastdata
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  example: "OpenWeatherMap"
+
+components:
+  schemas:
+    Device:
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
