@@ -120,7 +120,7 @@ namespace http
 			m_failcount = 0;
 		}
 
-		CWebServer::~CWebServer(void)
+		CWebServer::~CWebServer()
 		{
 			// RK, we call StopServer() instead of just deleting m_pWebEm. The Do_Work thread might still be accessing that object
 			StopServer();
@@ -702,11 +702,11 @@ namespace http
 					m_thread.reset();
 				}
 				delete m_pWebEm;
-				m_pWebEm = NULL;
+				m_pWebEm = nullptr;
 				delete m_pWebOpenAPI_v2;
-				m_pWebOpenAPI_v2 = NULL;
+				m_pWebOpenAPI_v2 = nullptr;
 				//delete m_pWebOpenAPI_v3;
-				//m_pWebOpenAPI_v3 = NULL;
+				//m_pWebOpenAPI_v3 = nullptr;
 			}
 			catch (...)
 			{
