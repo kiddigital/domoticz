@@ -119,7 +119,39 @@ components:
   schemas:
     Device:
       properties:
-        id:
-          type: integer
-        name:
+        DeviceID:
           type: string
+          maxLength: 25
+          example: "83011"
+        HardwareID:
+          type: integer
+          format: int32
+          example: 7
+        ID:
+          type: integer
+          format: int32
+          example: 1011
+        LastUpdate:
+          type: string
+          format: date-time
+          example: "2020-10-25 20:52:21"
+        Name:
+          type: string
+          maxLength: 100
+          example: "dummy-temp-hum"
+        SubType:
+          type: integer
+          example: 1
+        Type:
+          type: integer
+          example: 82
+        Unit:
+          type: integer
+          example: 1
+        nValue:
+          type: integer
+          example: 0
+        sValue: 
+          type: string
+          maxLength: 200
+          example: "10.30;66;123"

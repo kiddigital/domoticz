@@ -219,14 +219,14 @@ void CWebServerOpenAPI_v2::GetDevice(const Json::Value& input, Json::Value& resu
 		qresult = m_sql.safe_query("SELECT ID, Name, HardwareID, DeviceID, Unit, Type, SubType, nValue, sValue, LastUpdate FROM DeviceStatus WHERE (ID=%d)", iDeviceIDX);
 		if (!qresult.empty())
 		{
-			result["ID"] = qresult[0].at(0);
+			result["ID"] = std::strtoul(qresult[0].at(0).c_str(),nullptr,0);
 			result["Name"] = qresult[0].at(1);
-			result["HardwareID"] = qresult[0].at(2);
+			result["HardwareID"] = std::strtoul(qresult[0].at(2).c_str(),nullptr,0);
 			result["DeviceID"] = qresult[0].at(3);
-			result["Unit"] = qresult[0].at(4);
-			result["Type"] = qresult[0].at(5);
-			result["SubType"] = qresult[0].at(6);
-			result["nValue"] = qresult[0].at(7);
+			result["Unit"] = std::strtoul(qresult[0].at(4).c_str(),nullptr,0);
+			result["Type"] = std::strtoul(qresult[0].at(5).c_str(),nullptr,0);
+			result["SubType"] = std::strtoul(qresult[0].at(6).c_str(),nullptr,0);
+			result["nValue"] = std::strtol(qresult[0].at(7).c_str(),nullptr,0);
 			result["sValue"] = qresult[0].at(8);
 			result["LastUpdate"] = qresult[0].at(9);
 		}
