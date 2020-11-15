@@ -9,7 +9,7 @@ License: Public domain
 
 ************************************************************************/
 #include "stdafx.h"
-#include "WebServerOpenAPI_v2.h"
+#include "WebServerOpenAPI_v2.hpp"
 #include "Logger.h"
 #include "json_helper.h"
 #include "Helper.h"
@@ -18,7 +18,9 @@ License: Public domain
 #include "../webserver/reply.hpp"
 #include <sstream>
 #include <iomanip>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
+
+using namespace boost::placeholders;
 
 #define TESTDEFINE "testing123"
 
@@ -32,6 +34,7 @@ CWebServerOpenAPI_v2::CWebServerOpenAPI_v2()
 	gRegisterCommand("POSTcustomdata", boost::bind(&CWebServerOpenAPI_v2::PostCustomData, this, _1, _2));
 	gRegisterCommand("GETdevice", boost::bind(&CWebServerOpenAPI_v2::GetDevice, this, _1, _2));
 	gRegisterCommand("GETweatherforecastdata", boost::bind(&CWebServerOpenAPI_v2::GetWeatherForecastdata, this, _1, _2));
+	gRegisterCommand("GETservicesstatus", boost::bind(&CWebServerOpenAPI_v2::GetServicesStatus, this, _1, _2));
 }
 
 CWebServerOpenAPI_v2::~CWebServerOpenAPI_v2()
@@ -42,7 +45,7 @@ CWebServerOpenAPI_v2::~CWebServerOpenAPI_v2()
  * The generic (helper) functions to handle incoming requests
  **********************/
 
-bool CWebServerOpenAPI_v2::gHandleRequest(const std::string method, const std::string uri, std::multimap<std::__cxx11::string, std::__cxx11::string> parameters, Json::Value& root)
+bool CWebServerOpenAPI_v2::gHandleRequest(const std::string method, const std::string uri, std::multimap<std::string, std::string> parameters, Json::Value& root)
 {
 	Json::Value result;
 	Json::Value input;
@@ -59,11 +62,11 @@ bool CWebServerOpenAPI_v2::gHandleRequest(const std::string method, const std::s
 	m_command = method + m_command;
 	m_altcommand = method + m_altcommand;
 
-	// Get all parameters, noth query string AND (POST, PUT, etc.) body
-	for (std::multimap<std::__cxx11::string,std::__cxx11::string>::iterator it=parameters.begin(); it!=parameters.end(); ++it)
+	// Get all parameters, both query string AND (POST, PUT, etc.) body
+	for (auto &parameter: parameters)
 	{
-		_log.Debug(DEBUG_WEBSERVER, "Debugging parameters %s => %s", (*it).first.c_str(), (*it).second.c_str());
-		input[(*it).first] = (*it).second;
+		_log.Debug(DEBUG_WEBSERVER, "Debugging parameters %s => %s", parameter.first.c_str(), parameter.second.c_str());
+		input[parameter.first] = parameter.second;
 	}
 	
 	// Execute command if found
@@ -258,5 +261,7 @@ void CWebServerOpenAPI_v2::GetWeatherForecastdata(const Json::Value& input, Json
 	}
 	result["Latitude"] = Latitude;
 	result["Longitude"] = Longitude;
-
 }
+
+// Here we include all methods for all Services calls
+#include "WebServerOpenAPI_v2_Services.cpp"

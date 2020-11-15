@@ -1775,7 +1775,7 @@
     <ClInclude Include="..\main\WebServerHelper.h">
       <Filter>Webserver</Filter>
     </ClInclude>
-    <ClInclude Include="..\main\WebServerOpenAPI_v2.h">
+    <ClInclude Include="..\main\WebServerOpenAPI_v2.hpp">
       <Filter>Webserver</Filter>
     </ClInclude>
     <ClInclude Include="..\hardware\KMTronic433.h">

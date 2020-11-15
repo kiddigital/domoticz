@@ -1,8 +1,8 @@
 #pragma once
 
 #include <string>
-#include "WebServerOpenAPI_v2.h"
-//#include "WebServerOpenAPI_v3.h"
+#include "WebServerOpenAPI_v2.hpp"
+//#include "WebServerOpenAPI_v3.hpp"
 #include "../webserver/cWebem.h"
 #include "../webserver/request.hpp"
 #include "../webserver/session_store.hpp"
