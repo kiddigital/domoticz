@@ -32,6 +32,7 @@ CWebServerOpenAPI_v2::CWebServerOpenAPI_v2()
 	gRegisterCommand("POSTcustomdata", boost::bind(&CWebServerOpenAPI_v2::PostCustomData, this, _1, _2));
 	gRegisterCommand("GETdevice", boost::bind(&CWebServerOpenAPI_v2::GetDevice, this, _1, _2));
 	gRegisterCommand("GETweatherforecastdata", boost::bind(&CWebServerOpenAPI_v2::GetWeatherForecastdata, this, _1, _2));
+	gRegisterCommand("GETservicesstatus", boost::bind(&CWebServerOpenAPI_v2::GetServicesStatus, this, _1, _2));
 }
 
 CWebServerOpenAPI_v2::~CWebServerOpenAPI_v2()
@@ -258,5 +259,7 @@ void CWebServerOpenAPI_v2::GetWeatherForecastdata(const Json::Value& input, Json
 	}
 	result["Latitude"] = Latitude;
 	result["Longitude"] = Longitude;
-
 }
+
+// Here we include all methods for all Services calls
+#include "WebServerOpenAPI_v2_Services.cpp"

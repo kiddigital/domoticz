@@ -30,6 +30,7 @@ If/when the Domoticz webserver would become a RESTfull webservice with a clearly
 * Having a clear _contract_ makes it possible to mock either the Webservice and/or clients
 * Versioning of _contracts_ allows for having more that one implementation of a webservice call so new/updated methods can become available without breaking clients that have not yet adopted to the new version.
 * A readable _contract_ can also act as proper documentation if done nicely.
+* Bonus: You can put a (Cloud)Proxy/API-Gateway in front of your Domoticz that uses the OpenAPI spec and can act as a WebApplicationFirewall (WAF) protecting your (internal) Domoticz when only allowing access to your Domoticz via the Proxy (Look at Azure API-Management, AWS API gateway and others)
 
 ## Proof of Concept
 To find out if going the OpenAPI route could work for Domoticz, I have been working on a Proof-of-Concept and written some code to test a few things.
@@ -94,3 +95,5 @@ http://spec.openapis.org/oas/v3.0.3
 The OpenAPI (3) specification is the successor of Swagger (see https://swagger.io) and a real easy way to start with an OpenAPI (or Swagger) specification file is to put it in the online swagger editor:
 
 https://editor.swagger.io
+
+Some good info on creating a good specification can be found here : https://tyk.io/10-essentials-when-creating-an-openapi-specification/

@@ -46,4 +46,7 @@ private:
 	void PostCustomData(const Json::Value& input, Json::Value& result);
 	void GetDevice(const Json::Value& input, Json::Value& result);
 	void GetWeatherForecastdata(const Json::Value& input, Json::Value& result);
+
+	/* Services */
+	void GetServicesStatus(const Json::Value& input, Json::Value& result);
 };
