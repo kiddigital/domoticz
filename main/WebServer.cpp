@@ -1,8 +1,8 @@
 #include "stdafx.h"
 #include "WebServer.h"
 #include "WebServerHelper.h"
-#include "WebServerOpenAPI_v2.h"
-//#include "WebServerOpenAPI_v3.h"
+#include "WebServerOpenAPI_v2.hpp"
+//#include "WebServerOpenAPI_v3.hpp"
 #include <boost/bind/bind.hpp>
 #include <iostream>
 #include <fstream>

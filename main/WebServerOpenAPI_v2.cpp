@@ -9,7 +9,7 @@ License: Public domain
 
 ************************************************************************/
 #include "stdafx.h"
-#include "WebServerOpenAPI_v2.h"
+#include "WebServerOpenAPI_v2.hpp"
 #include "Logger.h"
 #include "json_helper.h"
 #include "Helper.h"
@@ -60,7 +60,7 @@ bool CWebServerOpenAPI_v2::gHandleRequest(const std::string method, const std::s
 	m_command = method + m_command;
 	m_altcommand = method + m_altcommand;
 
-	// Get all parameters, noth query string AND (POST, PUT, etc.) body
+	// Get all parameters, both query string AND (POST, PUT, etc.) body
 	for (std::multimap<std::__cxx11::string,std::__cxx11::string>::iterator it=parameters.begin(); it!=parameters.end(); ++it)
 	{
 		_log.Debug(DEBUG_WEBSERVER, "Debugging parameters %s => %s", (*it).first.c_str(), (*it).second.c_str());
