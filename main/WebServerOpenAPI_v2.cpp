@@ -61,10 +61,10 @@ bool CWebServerOpenAPI_v2::gHandleRequest(const std::string method, const std::s
 	m_altcommand = method + m_altcommand;
 
 	// Get all parameters, both query string AND (POST, PUT, etc.) body
-	for (std::multimap<std::__cxx11::string,std::__cxx11::string>::iterator it=parameters.begin(); it!=parameters.end(); ++it)
+	for (auto &parameter: parameters)
 	{
-		_log.Debug(DEBUG_WEBSERVER, "Debugging parameters %s => %s", (*it).first.c_str(), (*it).second.c_str());
-		input[(*it).first] = (*it).second;
+		_log.Debug(DEBUG_WEBSERVER, "Debugging parameters %s => %s", parameter.first.c_str(), parameter.second.c_str());
+		input[parameter.first] = parameter.second;
 	}
 	
 	// Execute command if found
