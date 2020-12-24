@@ -1,6 +1,7 @@
 # Domoticz OpenAPI
 
 ## Overview
+
 Domoticz is a Home Automation System that interacts with all kinds of directly connected hardware, internet-based webservices (API's, etc.) which represent all kinds of _connected_ devices and more. Sensor readings, switch statusses, etc. are represented through Domoticz __devices__.
 
 Through the default Domoticz webUI (User Interface), or any other public available or custom UI, the user can see and interact with de these devices.
@@ -13,6 +14,7 @@ The below diagram shows a high-level overview:
 Currently the Domoticz webserver has a lot of functions that have been added over the current lifespan (more that 6 years!).
 
 ## Why
+
 As contributor to Domoticz I am looking in ways to make my contributions easier to maintain and less buggy (yes, I am not perfect either).
 
 The current codebase of Domoticz, due to its historical growth, is not (yet) really suited (understandable) to adopt more recent methods of automated testing. So, when looking into ways to better test my contributions I found that (unit-)testing the hardware _modules_ is not easy to do without having to write a hugh amount of mock-classes to isolate parts. Although I would like to go there somehow one-day, it made more sense to look at a way to isolate other aspects of Domoticz first.
@@ -32,9 +34,10 @@ If/when the Domoticz webserver would become a RESTfull webservice with a clearly
 * A readable _contract_ can also act as proper documentation if done nicely.
 * Bonus: You can put a (Cloud)Proxy/API-Gateway in front of your Domoticz that uses the OpenAPI spec and can act as a WebApplicationFirewall (WAF) protecting your (internal) Domoticz when only allowing access to your Domoticz via the Proxy (Look at Azure API-Management, AWS API gateway and others)
 
-
 ---
+
 ## Proof of Concept
+
 To find out if going the OpenAPI route could work for Domoticz, I have been working on a Proof-of-Concept and written some code to test a few things.
 
 First, I extended the Domoticz Webserver to allow for a way to work with a new way to accept RESTfull-like request next to keeping the old functions working as well because I don't think a big-bang switch is a feasible route.
@@ -44,6 +47,7 @@ Second was to have a clear way in the code-base to work on possible new methods 
 With these capabilities I was able to create an OpenAPI specification for the _new_ webservice and partly implemented some of the specified methods.
 
 ## How does it work
+
 The Domoticz webservice has been extended and has a few new additional paths.
 
 The new webservice is available on the URL `/api/v2` (for example http://localhost:8080/api/v2)
@@ -52,17 +56,18 @@ To see what calls can be made, open the `domoticz.openapi_v2.yml` file (in the `
 
 Now use your browser, `curl` or even better, a tool like [Postman](https://www.postman.com/), to interact with the v2 Domoticz webservice.
 
-```
+```bash
 curl -X GET "http://localhost:8080/api/v2/device/123" -H  "accept: application/json"
 ```
 
 When you run Domoticz with some additional logging and debugging flags like `-loglevel normal,error,status,debug -debuglevel webserver` you can see some of the details on the processing. 
 
-
 ## Why /api/v2 ? Where is v1 ?
+
 As the current methods of the Domoticz webserver must be functional and kept around for quite some time to come, I considered these as __v1__. Hence it made sense to call the new methods _v2_ so it can easily be detected if a call is done to the existing- or new methods.
 
 ## Status
+
 I have created some initial code in my fork to demonstrate some aspects already:
 
 [OpenAPI branch on my fork](https://github.com/kiddigital/domoticz/tree/improvement/openapi-1) (as updated/close to the Beta branch as possible)
@@ -70,6 +75,7 @@ I have created some initial code in my fork to demonstrate some aspects already:
 The code should compile fine (it does for me on Linux at least) and you get the normal great Domoticz binary WITH additionally the new Webservice to play with :)
 
 ## Suggestion for the V2 call structure
+
 It feels logical to create a tree-like structure within the URL structures of the new API as such a tree-like structure is easy to understand and one can do some educated guesses on the correct URL instead of having to look at the documentation all the time. Trying to comply to the architectural principles of a RESTfull design should make things easier, scalable, extensible, etc.
 
 One 'strugle' with a lot of modern API's is that for most _CRUD_ operations things are relatively easy. As these operations perform there (ACID compliant?) work on a single _object_, it isn't as straight forward when it comes to _querying_ all the objects that are within scope of a single API. The idea of [_Command-query separation_](https://en.wikipedia.org/wiki/Command%E2%80%93query_separation) is a concept that provides some options for this problem.
@@ -78,7 +84,7 @@ Today a lot of systems adapt the [_CQRS_](https://martinfowler.com/bliki/CQRS.ht
 
 Although in the end I can see Domoticz adapting a fully [_Event Driven Architecture_](https://en.wikipedia.org/wiki/Event-driven_architecture), currently I guess that is a bridge to far and that is why, at least for v2, I came up with the following proposed structure that does separate _Commands_ (CRUD oriented) from _Queries_:
 
-```
+```text
 Base:       /api/v2                             -
 
 Commands:           /hardware                   -> Instantiate a new hardware module
@@ -112,6 +118,7 @@ Queries:
                     /scenes                     -> all scenes
                     /about                      -> information on the domoticz instance
                     /logs                       -> logs from domoticz
+                    /status                     -> status of domoticz, can be used for monitoring purposes
 
     The below resources are 'subsets of devices' from a specific group/filter AND in active state
                     /dashboard                  -> Retrieve dashboard info
@@ -120,6 +127,7 @@ Queries:
                     /weather
                     /weather/forecast           -> currently (non device) information to show an external forecast
                     /utilities
+        * Maybe these should be 'aliasses' for '/devices/#lights'; filter devices on the 'lights' category?
 
 *list is not 100% complete, but a first draft
 ```
@@ -128,30 +136,60 @@ __NOTE:__ Basic CRUD operations are done using HTTP Verbs GET, PUT, POST, DELETE
 
 __NOTE2:__ There might be a future need for partial updates to a given resource. In those cases, PATCH should be prefered over PUT as PUT needs a _full_ object. If optional fields would have been left out, PUT would interpret this as the optional fields are not present and therefor if they exist in the existing object, these fields should be removed. While PATCH would only consider the supplied fields and update these fields accordingly.
 
-
 Starting with the _Commands_, for each command the full object must get specified.
 
 The queries will either re-use or use parts of the object definitions from the commands I would think.
 
+## Suggestion for Authentication/Autorisation of v2 (and further) using JWT (JSON Web Tokens, RFC 7519)
+
+The current (Basic Auth and Login Auth) _Authentication_ methods are fully handled by Domoticz (webserver) but it is hard (impossible?) to a) use other (external) authentication methods and b) to check valid authentication outside of Domoticz, for example by a Proxy server.
+
+As always there is room for improvement and one of the things that could be improved is the _Autorisation_ possibilities.
+
+For API's, using JSON Web Tokens is a nice standarized way that has several benefits. It might be a good idea to use such a standard for the new v2 Domoticz API as it makes things open for current- and new use-cases.
+
+Ofcourse, Domoticz (webserver) still needs to have the ability to provide such a (session) Token, even if Authentication is not enabled. Actually _not enabled_ in this scenario would mean that there is no _Authentication_ required when requesting an access Token. Domoticz will hand-out a valid token with the full range of authorisation claims to use Domoticz. (Similar to the current implementation where a new sessionidentifier is always handed out).
+
+By documenting which [_claims_](https://tools.ietf.org/html/rfc7519#section-4) are used and how they are interpreted by the Domoticz webserver, an external authentication and/or authorisation server/service could be used to give out valid Token for use with Domoticz. For example making Single-signon possible.
+
+Another advantage of using JWT tokens, these token should be provided with each request using the standard HTTP 'Authorization' header:
+
+```text
+Authorization: Bearer <your-JWT-token>
+```
+
+This means, there is no need for a _session cookie_ anymore to send information to the webserver. This way for example CORS issues can be prevented.
+
+(Still the UI or any other app accessing the API can use cookies to store/transfer information which it like to keep around, for example the JWT token. But that is up to the client how it likes to deal with this).
+
+For more information on JWT, see https://jwt.io/introduction/
+
+__NOTE__: I am wondering, but not sure, if the current use of the sessionobject (represented in the UserSessions table) remains needed when using JWT as all the needed information to validate a JWT token is within the Token itself and the Token is tamper safe. As far as a quick scan showed, there seems no other use of this table other than checking Token validity. Not having to hit this table with each request, saves a lot of (read)queries.
+
 ---
+
 ## Mocking the Domoticz WebService (v2 and up)
+
 You can use [Prism](https://stoplight.io/open-source/prism/) as either a Mock Service to mock the Webservice from Domoticz based just on the OpenAPI spec file. Or even use Prism as a Proxy between the UI (or any client) and the Domoticz Webservice to validate requests AND responses against the specification.
 
 See https://meta.stoplight.io/docs/prism/docs/getting-started/01-installation.md
 
 Easiest way to install it (I did it in the 'extern' directory)
-```
+
+```bash
 curl -L https://raw.githack.com/stoplightio/prism/master/install | sh
 ```
 
 Now you can launch the Mock service using the Domoticz OpenAPI specification file:
-```
+
+```bash
 extern/prism-linux mock -h localhost OpenAPI/domoticz.openapi_v2.yml
 ```
 
 In the same way you previously interacted with the real Domoticz webservice, you can now interact with the mock service but now on port 1410 (instead of 8080). The difference being that the responses are not real but based on the example data in the specification file :) And no need to start/run Domoticz :)
 
 ## More on OpenAPI (OAS3)
+
 For more information on the goals, the how, the what, see the OpenAPI site at:
 
 https://www.openapis.org/
