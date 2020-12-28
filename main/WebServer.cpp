@@ -343,15 +343,8 @@ namespace http {
 
 			m_pWebEm->RegisterActionCode("uploadfloorplanimage", [this](auto &&session, auto &&req, auto &&redirect_uri) { UploadFloorplanImage(session, req, redirect_uri); });
 
-<<<<<<< HEAD
-			// WebServer call that are part of the Domoticz OpenAPI spec
-			m_pWebEm->RegisterPageCode("/api", std::bind(&CWebServer::GetApiPage, this, _1, _2, _3));
-			RegisterCommandCode("getappstatus", std::bind(&CWebServer::Cmd_GetAppStatus, this, _1, _2, _3), true);
-			// End of the OpenAPI list
-=======
 			// WebServer call that handles the part under the Domoticz OpenAPI spec
-			m_pWebEm->RegisterPageCode("/api", boost::bind(&CWebServer::GetApiPage, this, _1, _2, _3));
->>>>>>> 3f41bdfe6... Added new OpenAPI class to WebServer
+			m_pWebEm->RegisterPageCode("/api", [this](auto &&session, auto &&req, auto &&rep) { GetApiPage(session, req, rep); });
 
 			m_pWebEm->RegisterActionCode("setopenthermsettings", [this](auto &&session, auto &&req, auto &&redirect_uri) { SetOpenThermSettings(session, req, redirect_uri); });
 			RegisterCommandCode("sendopenthermcommand", [this](auto &&session, auto &&req, auto &&root) { Cmd_SendOpenThermCommand(session, req, root); }, true);

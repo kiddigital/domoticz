@@ -18,7 +18,9 @@ License: Public domain
 #include "../webserver/reply.hpp"
 #include <sstream>
 #include <iomanip>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
+
+using namespace boost::placeholders;
 
 #define TESTDEFINE "testing123"
 
@@ -43,7 +45,7 @@ CWebServerOpenAPI_v2::~CWebServerOpenAPI_v2()
  * The generic (helper) functions to handle incoming requests
  **********************/
 
-bool CWebServerOpenAPI_v2::gHandleRequest(const std::string method, const std::string uri, std::multimap<std::__cxx11::string, std::__cxx11::string> parameters, Json::Value& root)
+bool CWebServerOpenAPI_v2::gHandleRequest(const std::string method, const std::string uri, std::multimap<std::string, std::string> parameters, Json::Value& root)
 {
 	Json::Value result;
 	Json::Value input;

@@ -20,7 +20,7 @@ public:
 	CWebServerOpenAPI_v2();
 	~CWebServerOpenAPI_v2(void);
 
-	bool gHandleRequest(const std::string method, const std::string uri, std::multimap<std::__cxx11::string, std::__cxx11::string> parameters, Json::Value& root);
+	bool gHandleRequest(const std::string method, const std::string uri, std::multimap<std::string, std::string> parameters, Json::Value& root);
 	http::server::reply::status_type gGetResultCode();
 private:
 	void gInit();
