@@ -2186,6 +2186,9 @@
     <ClInclude Include="..\hardware\eVehicles\MercApi.h">
       <Filter>Devices\eVehicles</Filter>
     </ClInclude>
+    <ClInclude Include="..\hardware\eVehicles\VolvoApi.h">
+      <Filter>Devices\eVehicles</Filter>
+    </ClInclude>
     <ClInclude Include="..\hardware\eVehicles\VehicleApi.h">
       <Filter>Devices\eVehicles</Filter>
     </ClInclude>
@@ -2942,6 +2945,9 @@
       <Filter>Devices\eVehicles</Filter>
     </ClCompile>
     <ClCompile Include="..\hardware\eVehicles\MercApi.cpp">
+      <Filter>Devices\eVehicles</Filter>
+    </ClCompile>
+    <ClCompile Include="..\hardware\eVehicles\VolvoApi.cpp">
       <Filter>Devices\eVehicles</Filter>
     </ClCompile>
     <ClCompile Include="..\hardware\eVehicles\eVehicle.cpp">
