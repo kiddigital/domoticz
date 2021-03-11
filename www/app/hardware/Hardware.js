@@ -1121,6 +1121,42 @@ define(['app'], function (app) {
 					}
 				});
 			}
+			else if (text.indexOf("Volvo") >= 0) {
+				var username = $("#hardwarecontent #divlogin #username").val();
+				var password = encodeURIComponent($("#hardwarecontent #divlogin #password").val());
+				var vinnr = $("#hardwarecontent #divvolvooncall #vinnr").val();
+				var activeinterval = parseInt($("#hardwarecontent #divvolvooncall #activeinterval").val());
+				if (activeinterval < 1) {
+					activeinterval = 1;
+				}
+				var defaultinterval = parseInt($("#hardwarecontent #divvolvooncall #defaultinterval").val());
+				if (defaultinterval < 1) {
+					defaultinterval = 20;
+				}
+				var allowwakeup = $("#hardwarecontent #divvolvooncall #comboallowwakeup").val();
+				$.ajax({
+					url: "json.htm?type=command&param=updatehardware&htype=" + hardwaretype +
+					"&loglevel=" + logLevel +
+					"&username=" + encodeURIComponent(username) +
+					"&password=" + encodeURIComponent(password) +
+					"&name=" + encodeURIComponent(name) +
+					"&enabled=" + bEnabled +
+					"&idx=" + idx +
+					"&datatimeout=" + datatimeout +
+					"&extra=" + vinnr +
+					"&Mode1=" + defaultinterval +
+					"&Mode2=" + activeinterval + 
+					"&Mode3=" + allowwakeup,
+					async: false,
+					dataType: 'json',
+					success: function (data) {
+						RefreshHardwareTable();
+					},
+					error: function () {
+						ShowNotify($.t('Problem updating hardware!'), 2500, true);
+					}
+				});
+			}
 			else if (
 				(text.indexOf("ICY") >= 0) ||
 				(text.indexOf("Atag") >= 0) ||
@@ -2570,6 +2606,41 @@ define(['app'], function (app) {
 					defaultinterval = 20;
 				}
 				var allowwakeup = $("#hardwarecontent #divmercedes #comboallowwakeup").val();
+				$.ajax({
+					url: "json.htm?type=command&param=addhardware&htype=" + hardwaretype +
+					"&loglevel=" + logLevel +
+					"&username=" + encodeURIComponent(username) +
+					"&password=" + encodeURIComponent(password) +
+					"&name=" + encodeURIComponent(name) +
+					"&enabled=" + bEnabled +
+					"&datatimeout=" + datatimeout +
+					"&extra=" + vinnr +
+					"&Mode1=" + defaultinterval +
+					"&Mode2=" + activeinterval +
+					"&Mode3=" + allowwakeup,
+					async: false,
+					dataType: 'json',
+					success: function (data) {
+						RefreshHardwareTable();
+					},
+					error: function () {
+						ShowNotify($.t('Problem adding hardware!'), 2500, true);
+					}
+				});
+			}
+			else if (text.indexOf("Volvo") >= 0) {
+				var username = $("#hardwarecontent #divlogin #username").val();
+				var password = encodeURIComponent($("#hardwarecontent #divlogin #password").val());
+				var vinnr = encodeURIComponent($("#hardwarecontent #divvolvooncall #vinnr").val());
+				var activeinterval = parseInt($("#hardwarecontent #divvolvooncall #activeinterval").val());
+				if (activeinterval < 1) {
+					activeinterval = 1;
+				}
+				var defaultinterval = parseInt($("#hardwarecontent #divvolvooncall #defaultinterval").val());
+				if (defaultinterval < 1) {
+					defaultinterval = 20;
+				}
+				var allowwakeup = $("#hardwarecontent #divvolvooncall #comboallowwakeup").val();
 				$.ajax({
 					url: "json.htm?type=command&param=addhardware&htype=" + hardwaretype +
 					"&loglevel=" + logLevel +
@@ -4169,6 +4240,12 @@ define(['app'], function (app) {
 							$("#hardwarecontent #hardwareparamsmercedes #activeinterval").val(data["Mode2"]);
 							$("#hardwarecontent #hardwareparamsmercedes #comboallowwakeup").val(data["Mode3"]);
 						}
+						else if (data["Type"].indexOf("Volvo") >= 0) {
+							$("#hardwarecontent #hardwareparamsvolvo #vinnr").val(data["Extra"]);
+							$("#hardwarecontent #hardwareparamsvolvo #defaultinterval").val(data["Mode1"]);
+							$("#hardwarecontent #hardwareparamsvolvo #activeinterval").val(data["Mode2"]);
+							$("#hardwarecontent #hardwareparamsvolvo #comboallowwakeup").val(data["Mode3"]);
+						}
 						else if (data["Type"].indexOf("Satel Integra") >= 0) {
 							$("#hardwarecontent #hardwareparamspollinterval #pollinterval").val(data["Mode1"]);
 						}
@@ -4292,6 +4369,7 @@ define(['app'], function (app) {
                             (data["Type"].indexOf("Tado") >= 0) ||
                             (data["Type"].indexOf("Tesla") >= 0) ||
                             (data["Type"].indexOf("Mercedes") >= 0) ||
+                            (data["Type"].indexOf("Volvo") >= 0) ||
 							(data["Type"].indexOf("Logitech Media Server") >= 0) ||
 							(data["Type"].indexOf("HEOS by DENON") >= 0) ||
 							(data["Type"].indexOf("Razberry") >= 0) ||
@@ -4455,6 +4533,7 @@ define(['app'], function (app) {
 			$("#hardwarecontent #divenecotoon").hide();
 			$("#hardwarecontent #divtesla").hide();
 			$("#hardwarecontent #divmercedes").hide();
+			$("#hardwarecontent #divvolvooncall").hide();
 			$("#hardwarecontent #div1wire").hide();
 			$("#hardwarecontent #divgoodweweb").hide();
 			$("#hardwarecontent #divi2clocal").hide();
@@ -4645,6 +4724,10 @@ define(['app'], function (app) {
 			else if (text.indexOf("Mercedes") >= 0) {
 				$("#hardwarecontent #divlogin").show();
 				$("#hardwarecontent #divmercedes").show();
+			}
+			else if (text.indexOf("Volvo") >= 0) {
+				$("#hardwarecontent #divlogin").show();
+				$("#hardwarecontent #divvolvooncall").show();
 			}
 			else if (text.indexOf("SBFSpot") >= 0) {
 				$("#hardwarecontent #divlocation").show();
