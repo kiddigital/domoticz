@@ -17,6 +17,7 @@ License: Public domain
 #include "TeslaApi.h"
 #include "TestcarApi.h"
 #include "MercApi.h"
+#include "VolvoApi.h"
 #include "../../main/Helper.h"
 #include "../../main/Logger.h"
 #include "../hardwaretypes.h"
@@ -63,6 +64,9 @@ CeVehicle::CeVehicle(const int ID, eVehicleType vehicletype, const std::string& 
 		break;
 	case Mercedes:
 		m_api = new CMercApi(username, password, carid);
+		break;
+	case Volvo:
+		m_api = new CVolvoApi(username, password, carid);
 		break;
 	case Testcar:
 		m_api = new CTestcarApi(username, password, carid);

@@ -24,7 +24,8 @@ public:
 	enum eVehicleType {
 		Tesla,
 		Mercedes,
-		Testcar
+		Testcar,
+		Volvo
 	};
 
 	CeVehicle(int ID, eVehicleType vehicletype, const std::string &username, const std::string &password, int defaultinterval, int activeinterval, bool allowwakeup, const std::string &carid);
