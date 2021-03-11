@@ -965,6 +965,9 @@ bool MainWorker::AddHardwareFromParams(
 	case HTYPE_Mercedes:
 		pHardware = new CeVehicle(ID, CeVehicle::Mercedes, Username, Password, Mode1, Mode2, Mode3, Extra);
 		break;
+	case HTYPE_Volvo:
+		pHardware = new CeVehicle(ID, CeVehicle::Volvo, Username, Password, Mode1, Mode2, Mode3, Extra);
+		break;
 	case HTYPE_Honeywell:
 		pHardware = new CHoneywell(ID, Username, Password, Extra);
 		break;

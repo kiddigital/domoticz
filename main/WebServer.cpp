@@ -1228,6 +1228,7 @@ namespace http {
 				(htype == HTYPE_Tado) ||
 				(htype == HTYPE_Tesla) ||
 				(htype == HTYPE_Mercedes) ||
+				(htype == HTYPE_Volvo) ||
 				(htype == HTYPE_Netatmo)
 				)
 			{
@@ -1634,6 +1635,7 @@ namespace http {
 				(htype == HTYPE_Tado) ||
 				(htype == HTYPE_Tesla) ||
 				(htype == HTYPE_Mercedes) ||
+				(htype == HTYPE_Volvo) ||
 				(htype == HTYPE_Netatmo)
 				)
 			{
