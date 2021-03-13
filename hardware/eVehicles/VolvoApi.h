@@ -51,6 +51,7 @@ private:
 	std::string m_username;
 	std::string m_password;
 	std::string m_VIN;
+	std::string m_APIKey;
 
 	bool m_authenticating;
 	std::string m_authtoken;

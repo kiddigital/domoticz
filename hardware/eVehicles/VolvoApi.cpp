@@ -24,10 +24,10 @@ License: Public domain
 // based on API's as described on https://developer.volvocars.com/volvo-api/extended-vehicle/
 // Assumes ...
 // ...
-#define VOLVO_URL_AUTH "https://id.mercedes-benz.com"
+#define VOLVO_URL_AUTH "https://volvo.127.0.0.1.nip.io"
 #define VOLVO_API_TOKEN "/as/token.oauth2"
-#define VOLVO_URL "https://api.mercedes-benz.com"
-#define VOLVO_API "/vehicledata/v2/vehicles"
+#define VOLVO_URL "https://api.volvocars.com/extended-vehicle"
+#define VOLVO_API "/v1/vehicles"
 
 #define VOLVO_APITIMEOUT (30)
 #define VOLVO_REFRESHTOKEN_CLEARED "Refreshtoken cleared because it was invalid!"
@@ -38,9 +38,11 @@ CVolvoApi::CVolvoApi(const std::string &username, const std::string &password, c
 	m_username = username;
 	m_password = base64_encode(username);
 	m_VIN = vinnr;
+	m_APIKey = username;
 
 	m_authtoken = password;
-	m_accesstoken = "";
+	//m_accesstoken = "";
+	m_accesstoken = password;
 	m_refreshtoken = "";
 	m_uservar_refreshtoken = VOLVO_REFRESHTOKEN_USERVAR;
 	m_uservar_refreshtoken_idx = 0;
@@ -695,7 +697,7 @@ bool CVolvoApi::SendCommand(const std::string &command, Json::Value &reply, cons
 	return true;
 }
 
-// Requests an access token from the MB OAuth Api.
+// Requests an access token from the Volvo OAuth Api.
 bool CVolvoApi::GetAuthToken(const std::string &username, const std::string &password, const bool refreshUsingToken)
 {
 	if (!refreshUsingToken && username.empty())
@@ -741,7 +743,7 @@ bool CVolvoApi::GetAuthToken(const std::string &username, const std::string &pas
 
 	std::string _sResponse;
 	Json::Value _jsRoot;
-
+/*
 	if (!SendToApi(Post, _sUrl, sPostData, _sResponse, _vExtraHeaders, _jsRoot, false))
 	{
 		_log.Log(LOG_ERROR, "VolvoApi: Failed to get token.");
@@ -768,12 +770,13 @@ bool CVolvoApi::GetAuthToken(const std::string &username, const std::string &pas
 		return false;
 	}
 	_log.Log(LOG_STATUS, "VolvoApi: Received new refresh token %s .", m_refreshtoken.c_str());
+*/
 	_log.Debug(DEBUG_NORM, "VolvoApi: Received access token from API.");
 
 	return true;
 }
 
-// Sends a request to the MB API.
+// Sends a request to the Volvo API.
 bool CVolvoApi::SendToApi(const eApiMethod eMethod, const std::string& sUrl, const std::string& sPostData,
 	std::string& sResponse, const std::vector<std::string>& vExtraHeaders, Json::Value& jsDecodedResponse, const bool bSendAuthHeaders, const int timeout)
 {
@@ -800,6 +803,8 @@ bool CVolvoApi::SendToApi(const eApiMethod eMethod, const std::string& sUrl, con
 		// Prepare the authentication headers if requested.
 		if (bSendAuthHeaders) 
 			_vExtraHeaders.push_back("Authorization: Bearer " + m_accesstoken);
+
+		_vExtraHeaders.push_back("vcc-api-key: " + m_APIKey);
 
 		// In/Decrease default timeout
 		if(timeout == 0)
