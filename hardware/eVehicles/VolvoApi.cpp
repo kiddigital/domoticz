@@ -153,9 +153,9 @@ bool CVolvoApi::GetAllData(tAllCarData& data)
 	bool bSucces = false;
 
 	bSucces = GetVehicleData(data.vehicle);
-	bSucces = bSucces && GetLocationData(data.location);
-	bSucces = bSucces && GetChargeData(data.charge);
-	bSucces = bSucces && GetClimateData(data.climate);
+	//bSucces = bSucces && GetLocationData(data.location);
+	//bSucces = bSucces && GetChargeData(data.charge);
+	//bSucces = bSucces && GetClimateData(data.climate);
 	bSucces = bSucces && GetCustomData(data.custom);
 
 	return bSucces;
@@ -295,7 +295,7 @@ bool CVolvoApi::GetVehicleData(tVehicleData& data)
 	Json::Value reply;
 	bool bData = false;
 
-	if (GetData("vehiclelockstatus", reply))
+	if (GetResourceData("carLocked", reply))
 	{
 		if (reply.empty())
 		{
@@ -303,29 +303,22 @@ bool CVolvoApi::GetVehicleData(tVehicleData& data)
 		}
 		else
 		{
-			if (!reply.isArray())
-			{
-				_log.Log(LOG_ERROR, "VolvoApi: Unexpected reply from VehicleLockStatus.");
-			}
-			else
-			{
-				GetVehicleData(reply, data);
-				bData = true;
-			}
+			GetVehicleData(reply, data);
+			bData = true;
 		}
 	}
 	else
 	{
 		if (m_httpresultcode == 403)
 		{
-			_log.Log(LOG_STATUS, "Access has been denied to the VehicleLockStatus data!");
+			_log.Log(LOG_STATUS, "Access has been denied to the carLocked data!");
 			bData = true;	// We should see if we can continue with the rest
 		}
 	}
 
 	reply.clear();
 
-	if (GetData("payasyoudrive", reply))
+	if (GetResourceData("odometer", reply))
 	{
 		if (reply.empty())
 		{
@@ -333,22 +326,15 @@ bool CVolvoApi::GetVehicleData(tVehicleData& data)
 		}
 		else
 		{
-			if (!reply.isArray())
-			{
-				_log.Log(LOG_ERROR, "VolvoApi: Unexpected reply from PayasyouDrive.");
-			}
-			else
-			{
-				GetVehicleData(reply, data);
-				bData = true;
-			}
+			GetVehicleData(reply, data);
+			bData = true;
 		}
 	}
 	else
 	{
 		if (m_httpresultcode == 403)
 		{
-			_log.Log(LOG_STATUS, "Access has been denied to the PayAsYouDrive data!");
+			_log.Log(LOG_STATUS, "Access has been denied to the odometer data!");
 			bData = true;	// We should see if we can continue with the rest
 		}
 	}
@@ -413,37 +399,30 @@ bool CVolvoApi::GetCustomData(tCustomData& data)
 
 void CVolvoApi::GetVehicleData(Json::Value& jsondata, tVehicleData& data)
 {
-	uint8_t cnt = 0;
-	do
-	{
+	//uint8_t cnt = 0;
+	//do
+	//{
 		Json::Value iter;
 
-		iter = jsondata[cnt];
+		iter = jsondata;
 		for (auto const& id : iter.getMemberNames())
 		{
 			if(!(iter[id].isNull()))
 			{
 				_log.Debug(DEBUG_NORM, "VolvoApi: Found non empty field %s", id.c_str());
 
-				if (id == "doorlockstatusvehicle")
+				if (id == "carLocked")
 				{
 					Json::Value iter2;
 					iter2 = iter[id];
 					if(!iter2["value"].empty())
 					{
-						_log.Debug(DEBUG_NORM, "VolvoApi: DoorLockStatusVehicle has value %s", iter2["value"].asString().c_str());
-						data.car_open = (iter2["value"].asString() == "1" || iter2["value"].asString() == "2" ? false : true);
-						if(iter2["value"].asString() == "3")
-						{
-							data.car_open_message = "Your Volvo is partly unlocked";
-						}
-						else
-						{
-							data.car_open_message = (data.car_open ? "Your Volvo is open" : "Your Volvo is locked");
-						}
+						_log.Debug(DEBUG_NORM, "VolvoApi: carLocked has value %s", iter2["value"].asString().c_str());
+						data.car_open = (iter2["value"].asString() == "true" ? false : true);
+						data.car_open_message = (data.car_open ? "Your Volvo is open" : "Your Volvo is locked");
 					}
 				}
-				if (id == "odo")
+				if (id == "odometer")
 				{
 					Json::Value iter2;
 					iter2 = iter[id];
@@ -455,14 +434,14 @@ void CVolvoApi::GetVehicleData(Json::Value& jsondata, tVehicleData& data)
 				}
 			}
 		}
-		cnt++;
-	} while (!jsondata[cnt].empty());
+	//	cnt++;
+	//} while (!jsondata[cnt].empty());
 }
 
 bool CVolvoApi::GetData(const std::string &datatype, Json::Value &reply)
 {
 	std::stringstream ss;
-	ss << VOLVO_URL << VOLVO_API << "/" << m_VIN << "/containers/" << datatype;
+	ss << VOLVO_URL << VOLVO_API << "/" << m_VIN << "/resources/" << datatype;
 	std::string _sUrl = ss.str();
 	std::string _sResponse;
 
@@ -548,52 +527,55 @@ bool CVolvoApi::ProcessAvailableResources(Json::Value& jsondata)
 
 	try
 	{
-		do
+		if(!jsondata["resources"].empty())
 		{
-			Json::Value iter;
-
-			iter = jsondata[cnt];
-			for (auto const& id : iter.getMemberNames())
+			do
 			{
-				if(!(iter[id].isNull()))
+				Json::Value iter;
+
+				iter = jsondata["resources"][cnt];
+				for (auto const& id : iter.getMemberNames())
 				{
-					Json::Value iter2;
-					iter2 = iter[id];
-					//_log.Debug(DEBUG_NORM, "VolvoApi: Field (%d) %s has value %s",cnt, id.c_str(), iter2.asString().c_str());
-					if (id == "name")
+					if(!(iter[id].isNull()))
 					{
-						if (cnt > 0)
+						Json::Value iter2;
+						iter2 = iter[id];
+						//_log.Debug(DEBUG_NORM, "VolvoApi: Field (%d) %s has value %s",cnt, id.c_str(), iter2.asString().c_str());
+						if (id == "name")
 						{
-							ss << ",";
+							if (cnt > 0)
+							{
+								ss << ",";
+							}
+							ss << iter2.asString();
 						}
-						ss << iter2.asString();
-					}
-					if (id == "version" && iter2.asString() != "1.0")
-					{
-						_log.Log(LOG_STATUS, "Found resources with another version (%s) than expected 1.0! Continueing but results may be wrong!", iter2.asString().c_str());
+						if (id == "version" && iter2.asString() != "1.0")
+						{
+							_log.Log(LOG_STATUS, "Found resources with another version (%s) than expected 1.0! Continueing but results may be wrong!", iter2.asString().c_str());
+						}
 					}
 				}
+				cnt++;
+			} while (!jsondata["resources"][cnt].empty());
+
+			if (ss.str().length() > 0)
+			{
+				std::vector<std::string> strarray;
+
+				m_fields = ss.str();
+				StringSplit(m_fields, ",", strarray);
+				m_fieldcnt = static_cast<int16_t>(strarray.size());
+
+				_log.Log(LOG_STATUS, "Found %d resource fields: %s", m_fieldcnt, m_fields.c_str());
+
+				m_crc = crc;
+
+				bProcessed = true;
 			}
-			cnt++;
-		} while (!jsondata[cnt].empty());
-
-		if (ss.str().length() > 0)
-		{
-			std::vector<std::string> strarray;
-
-			m_fields = ss.str();
-			StringSplit(m_fields, ",", strarray);
-			m_fieldcnt = static_cast<int16_t>(strarray.size());
-
-			_log.Log(LOG_STATUS, "Found %d resource fields: %s", m_fieldcnt, m_fields.c_str());
-
-			m_crc = crc;
-
-			bProcessed = true;
-		}
-		else
-		{
-			_log.Debug(DEBUG_NORM, "VolvoApi: Found %d resource fields but none called name!",cnt);
+			else
+			{
+				_log.Debug(DEBUG_NORM, "VolvoApi: Found %d resource fields but none called name!",cnt);
+			}
 		}
 	}
 	catch(const std::exception& e)
