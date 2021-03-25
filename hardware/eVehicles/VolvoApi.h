@@ -35,7 +35,6 @@ private:
 		Post,
 		Get
 	};
-	bool GetData(const std::string &datatype, Json::Value &reply);
 	bool GetResourceData(const std::string &datatype, Json::Value &reply);
 	bool ProcessAvailableResources(Json::Value& jsondata);
 	bool SendCommand(const std::string &command, Json::Value &reply, const std::string &parameters = "");

@@ -59,12 +59,12 @@ CVolvoApi::CVolvoApi(const std::string &username, const std::string &password, c
 	m_fields = "";
 	m_fieldcnt = -1;
 
-	m_capabilities.has_battery_level = true;
+	m_capabilities.has_battery_level = false;
 	m_capabilities.has_charge_command = false;
 	m_capabilities.has_climate_command = false;
 	m_capabilities.has_defrost_command = false;
 	m_capabilities.has_inside_temp = false;
-	m_capabilities.has_outside_temp = false;
+	m_capabilities.has_outside_temp = true;
 	m_capabilities.has_odo = true;
 	m_capabilities.has_lock_status = true;
 	m_capabilities.has_charge_limit = false;
@@ -153,9 +153,9 @@ bool CVolvoApi::GetAllData(tAllCarData& data)
 	bool bSucces = false;
 
 	bSucces = GetVehicleData(data.vehicle);
-	//bSucces = bSucces && GetLocationData(data.location);
-	//bSucces = bSucces && GetChargeData(data.charge);
-	//bSucces = bSucces && GetClimateData(data.climate);
+	bSucces = bSucces && GetLocationData(data.location);
+	bSucces = bSucces && GetChargeData(data.charge);
+	bSucces = bSucces && GetClimateData(data.climate);
 	bSucces = bSucces && GetCustomData(data.custom);
 
 	return bSucces;
@@ -164,127 +164,56 @@ bool CVolvoApi::GetAllData(tAllCarData& data)
 bool CVolvoApi::GetLocationData(tLocationData& data)
 {
 	return true; // not implemented for Volvo
-	/*
-	Json::Value reply;
-
-	if (GetData("drive_state", reply))
-	{
-		GetLocationData(reply["response"], data);
-		return true;
-	}
-	return false;
-	*/
 }
 
 void CVolvoApi::GetLocationData(Json::Value& jsondata, tLocationData& data)
 {
-	/*
-	std::string CarLatitude = jsondata["latitude"].asString();
-	std::string CarLongitude = jsondata["longitude"].asString();
-	data.speed = jsondata["speed"].asInt();
-	data.is_driving = data.speed > 0;
-	data.latitude = std::stod(CarLatitude);
-	data.longitude = std::stod(CarLongitude);
-	*/
 }
 
 bool CVolvoApi::GetChargeData(CVehicleApi::tChargeData& data)
 {
-	Json::Value reply;
-	bool bData = false;
-
-	if (GetData("electricvehicle", reply))
-	{
-		data.battery_level = 255.0F;	// Initialize at 'no reading'
-		if (reply.empty())
-		{
-			bData = true;	// This occurs when the API call return a 204 (No Content). So everything is valid/ok, just no data
-		}
-		else
-		{
-			if (!reply.isArray())
-			{
-				_log.Log(LOG_ERROR, "VolvoApi: Unexpected reply from ElectricVehicle.");
-			}
-			else
-			{
-				GetChargeData(reply, data);
-				bData = true;
-			}
-		}
-	}
-	else
-	{
-		if (m_httpresultcode == 403)
-		{
-			_log.Log(LOG_STATUS, "Access has been denied to the ElectricVehicle data!");
-			bData = true;	// We should see if we can continue with the rest
-		}
-	}
-
-	return bData;
+	return true; // not implemented for Volvo
 }
 
 void CVolvoApi::GetChargeData(Json::Value& jsondata, CVehicleApi::tChargeData& data)
 {
-	uint8_t cnt = 0;
-	do
-	{
-		Json::Value iter;
-
-		iter = jsondata[cnt];
-		for (auto const& id : iter.getMemberNames())
-		{
-			if(!(iter[id].isNull()))
-			{
-				_log.Debug(DEBUG_NORM, "VolvoApi: Found non empty field %s", id.c_str());
-
-				if (id == "soc")
-				{
-					Json::Value iter2;
-					iter2 = iter[id];
-					if(!iter2["value"].empty())
-					{
-						_log.Debug(DEBUG_NORM, "VolvoApi: SoC has value %s", iter2["value"].asString().c_str());
-						data.battery_level = static_cast<float>(atof(iter2["value"].asString().c_str()));
-					}
-				}
-				if (id == "rangeelectric")
-				{
-					Json::Value iter2;
-					iter2 = iter[id];
-					if(!iter2["value"].empty())
-					{
-						_log.Debug(DEBUG_NORM, "VolvoApi: RangeElectric has value %s", iter2["value"].asString().c_str());
-						data.status_string = "Approximate range " + iter2["value"].asString() + " " + m_config.distance_unit;
-					}
-				}
-			}
-		}
-		cnt++;
-	} while (!jsondata[cnt].empty());
 }
 
 bool CVolvoApi::GetClimateData(tClimateData& data)
 {
-	return true; // not implemented for Volvo
-	/*
 	Json::Value reply;
 
-	if (GetData("climate_state", reply))
+	if (GetResourceData("externalTemp", reply))
 	{
-		GetClimateData(reply["response"], data);
+		GetClimateData(reply, data);
 		return true;
 	}
 	return false;
-	*/
 }
 
 void CVolvoApi::GetClimateData(Json::Value& jsondata, tClimateData& data)
 {
+	Json::Value iter;
+
+	iter = jsondata;
+	for (auto const& id : iter.getMemberNames())
+	{
+		if(!(iter[id].isNull()))
+		{
+			if (id == "externalTemp")
+			{
+				Json::Value iter2;
+				iter2 = iter[id];
+				if(!iter2["value"].empty())
+				{
+					_log.Debug(DEBUG_NORM, "VolvoApi: externalTemp has value %s", iter2["value"].asString().c_str());
+					data.outside_temp = static_cast<float>(atof(iter2["value"].asString().c_str()));
+				}
+			}
+		}
+	}
 	/*
 	data.inside_temp = jsondata["inside_temp"].asFloat();
-	data.outside_temp = jsondata["outside_temp"].asFloat();
 	data.is_climate_on = jsondata["is_climate_on"].asBool();
 	data.is_defrost_on = (jsondata["defrost_mode"].asInt() != 0);
 	*/
@@ -399,61 +328,38 @@ bool CVolvoApi::GetCustomData(tCustomData& data)
 
 void CVolvoApi::GetVehicleData(Json::Value& jsondata, tVehicleData& data)
 {
-	//uint8_t cnt = 0;
-	//do
-	//{
-		Json::Value iter;
+	Json::Value iter;
 
-		iter = jsondata;
-		for (auto const& id : iter.getMemberNames())
+	iter = jsondata;
+	for (auto const& id : iter.getMemberNames())
+	{
+		if(!(iter[id].isNull()))
 		{
-			if(!(iter[id].isNull()))
-			{
-				_log.Debug(DEBUG_NORM, "VolvoApi: Found non empty field %s", id.c_str());
+			_log.Debug(DEBUG_NORM, "VolvoApi: Found non empty field %s", id.c_str());
 
-				if (id == "carLocked")
+			if (id == "carLocked")
+			{
+				Json::Value iter2;
+				iter2 = iter[id];
+				if(!iter2["value"].empty())
 				{
-					Json::Value iter2;
-					iter2 = iter[id];
-					if(!iter2["value"].empty())
-					{
-						_log.Debug(DEBUG_NORM, "VolvoApi: carLocked has value %s", iter2["value"].asString().c_str());
-						data.car_open = (iter2["value"].asString() == "true" ? false : true);
-						data.car_open_message = (data.car_open ? "Your Volvo is open" : "Your Volvo is locked");
-					}
+					_log.Debug(DEBUG_NORM, "VolvoApi: carLocked has value %s", iter2["value"].asString().c_str());
+					data.car_open = (iter2["value"].asString() == "true" ? false : true);
+					data.car_open_message = (data.car_open ? "Your Volvo is open" : "Your Volvo is locked");
 				}
-				if (id == "odometer")
+			}
+			if (id == "odometer")
+			{
+				Json::Value iter2;
+				iter2 = iter[id];
+				if(!iter2["value"].empty())
 				{
-					Json::Value iter2;
-					iter2 = iter[id];
-					if(!iter2["value"].empty())
-					{
-						_log.Debug(DEBUG_NORM, "VolvoApi: Odo has value %s", iter2["value"].asString().c_str());
-						data.odo = static_cast<float>(atof(iter2["value"].asString().c_str()));
-					}
+					_log.Debug(DEBUG_NORM, "VolvoApi: Odo has value %s", iter2["value"].asString().c_str());
+					data.odo = static_cast<float>(atof(iter2["value"].asString().c_str()));
 				}
 			}
 		}
-	//	cnt++;
-	//} while (!jsondata[cnt].empty());
-}
-
-bool CVolvoApi::GetData(const std::string &datatype, Json::Value &reply)
-{
-	std::stringstream ss;
-	ss << VOLVO_URL << VOLVO_API << "/" << m_VIN << "/resources/" << datatype;
-	std::string _sUrl = ss.str();
-	std::string _sResponse;
-
-	if (!SendToApi(Get, _sUrl, "", _sResponse, *(new std::vector<std::string>()), reply, true))
-	{
-		_log.Log(LOG_ERROR, "VolvoApi: Failed to get data %s.", datatype.c_str());
-		return false;
 	}
-
-	_log.Debug(DEBUG_NORM, "VolvoApi: Get data %s received reply: %s", datatype.c_str(), _sResponse.c_str());
-
-	return true;
 }
 
 bool CVolvoApi::GetResourceData(const std::string &datatype, Json::Value &reply)
