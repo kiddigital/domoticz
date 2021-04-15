@@ -105,7 +105,7 @@ paths:
           content: 
             application/problem+json:
               schema:
-                $ref: '##/components/schemas/Problem'
+                $ref: '#/components/schemas/Problem'
         '404':
           description: If a given device IDX does not exists
   /weatherforecastdata:
@@ -142,12 +142,43 @@ paths:
       responses:
         '200':
           description: Everything ok and the details requested by the verbosity level
+          content:
+            application/json:
+              schema:
+                properties:
+                  Status:
+                    type: string
+                    maxLength: 50
+                    description: |
+                      Human readable text explaining the current OK status of the application
+                      This explanation is only available when the 'verbose' flag has been specified
+                      Otherwise an empty (204) response is returned.
+                    example: "All parts of the application are looking good!"
         '204':
           description: |
             No Content, just stating everything is ok. 
-            This respons is here for use by automated monitoring systems
-            
-
+            This respons is here for use by automated monitoring systems that just check the result code
+            and do nothing with a response if one is available in case everything is OK.
+        '500':
+          description: |
+            Something unexpected went wrong, so unable to give a real answer to the request.
+            This means that the health check itself has failed so we do not have a definitive answer.
+            Wise to consider this also an indication that something is wrong and a restart or similar might be needed.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '503':
+          description: |
+            Everything is not ok :(
+            The application did some self checking and found something not behaving as expected.
+            This is the responsecode the application will provide after succesfully completing the self-healtcheck
+            and finding something that is not as it should be.
+            Probably a good idea to restart the application and see if the problem has been resolved.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
 components:
   schemas:
     Device:
@@ -167,7 +198,7 @@ components:
         LastUpdate:
           type: string
           format: date-time
-          example: "2020-10-25 20:52:21"
+          example: "2020-10-25T20:52:21+00"
         Name:
           type: string
           maxLength: 100
