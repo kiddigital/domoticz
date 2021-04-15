@@ -1,0 +1,14 @@
+{
+    "DomoticzUpdateURL" : "https://www.domoticz.com/download.php?channel=stable&type=release&system=linux&machine=armv7l",
+	"HaveUpdate" : false,
+	"Revision" : 11995,
+	"SystemName" : "linux",
+	"UseUpdate" : true,
+	"build_time" : "2020-04-26 13:47:55",
+	"dzvents_version" : "3.0.2",
+	"hash" : "b63341bc0",
+	"python_version" : "3.7.3 (default, Jul 25 2020, 13:03:44) \n[GCC 8.3.0]",
+	"status" : "OK",
+	"title" : "GetVersion",
+	"version" : "2020.2"
+}
