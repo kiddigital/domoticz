@@ -1,0 +1,27 @@
+{
+	"AllowWidgetOrdering" : true,
+	"DashboardType" : 0,
+	"DegreeDaysBaseTemperature" : 18.0,
+	"FiveMinuteHistoryDays" : 7,
+	"MobileType" : 0,
+	"TempScale" : 1.0,
+	"TempSign" : "C",
+	"WindScale" : 1.0,
+	"WindSign" : "m/s",
+	"language" : "nl",
+	"result" : 
+	{
+		"EnableTabCustom" : true,
+		"EnableTabDashboard" : true,
+		"EnableTabFloorplans" : false,
+		"EnableTabLights" : true,
+		"EnableTabProxy" : false,
+		"EnableTabScenes" : true,
+		"EnableTabTemp" : true,
+		"EnableTabUtility" : true,
+		"EnableTabWeather" : true,
+		"ShowUpdatedEffect" : false
+	},
+	"status" : "OK",
+	"title" : "GetConfig"
+}
