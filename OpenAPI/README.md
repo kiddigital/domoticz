@@ -164,8 +164,6 @@ This means, there is no need for a _session cookie_ anymore to send information 
 
 For more information on JWT, see https://jwt.io/introduction/
 
-__NOTE__: I am wondering, but not sure, if the current use of the sessionobject (represented in the UserSessions table) remains needed when using JWT as all the needed information to validate a JWT token is within the Token itself and the Token is tamper safe. As far as a quick scan showed, there seems no other use of this table other than checking Token validity. Not having to hit this table with each request, saves a lot of (read)queries.
-
 ---
 
 ## Mocking the Domoticz WebService (v2 and up)
@@ -174,7 +172,7 @@ You can use [Prism](https://stoplight.io/open-source/prism/) as either a Mock Se
 
 See https://meta.stoplight.io/docs/prism/docs/getting-started/01-installation.md
 
-Easiest way to install it (I did it in the 'extern' directory)
+Easiest way to install it, as root user run (which downloads and runs the script):
 
 ```bash
 curl -L https://raw.githack.com/stoplightio/prism/master/install | sh
@@ -183,10 +181,10 @@ curl -L https://raw.githack.com/stoplightio/prism/master/install | sh
 Now you can launch the Mock service using the Domoticz OpenAPI specification file:
 
 ```bash
-extern/prism-linux mock -h localhost OpenAPI/domoticz.openapi_v2.yml
+prism mock -h localhost OpenAPI/domoticz.openapi_v2.yml
 ```
 
-In the same way you previously interacted with the real Domoticz webservice, you can now interact with the mock service but now on port 1410 (instead of 8080). The difference being that the responses are not real but based on the example data in the specification file :) And no need to start/run Domoticz :)
+In the same way you previously interacted with the real Domoticz webservice, you can now interact with the mock service but now on port 4010 (instead of 8080). The difference being that the responses are not real but based on the example data in the specification file :) And no need to start/run Domoticz :)
 
 ## More on OpenAPI (OAS3)
 
