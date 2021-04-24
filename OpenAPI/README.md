@@ -121,6 +121,11 @@ Queries:
                     /weather/forecast           -> currently (non device) information to show an external forecast
                     /utilities
 
+IAM:
+                    /oauth2/v1/authorize
+                    /oauth2/v1/token
+                    /.well-known/openid-configuration
+
 *list is not 100% complete, but a first draft
 ```
 

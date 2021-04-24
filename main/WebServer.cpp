@@ -1,8 +1,8 @@
 #include "stdafx.h"
 #include "WebServer.h"
 #include "WebServerHelper.h"
-#include "WebServerOpenAPI_v2.hpp"
-//#include "WebServerOpenAPI_v3.hpp"
+#include "WebServerOpenAPI_v2.h"
+//#include "WebServerOpenAPI_v3.h"
 #include <boost/bind/bind.hpp>
 #include <iostream>
 #include <fstream>
@@ -351,6 +351,9 @@ namespace http
 					m_iamsettings.discovery_url.c_str(), [this](auto&& session, auto&& req, auto&& rep) { GetOpenIDConfiguration(session, req, rep); }, true);
 			}
 
+			// WebServer call that handles the part under the Domoticz OpenAPI spec
+			m_pWebEm->RegisterPageCode("/api", [this](auto &&session, auto &&req, auto &&rep) { GetApiPage(session, req, rep); });
+
 			m_pWebEm->RegisterPageCode("/json.htm", [this](auto&& session, auto&& req, auto&& rep) { GetJSonPage(session, req, rep); });
 			// These 'Pages' should probably be 'moved' to become Command codes handled by the 'json.htm API', so we get all API calls through one entry point
 			// And why .php or .cgi while all these commands are NOT handled by a PHP or CGI processor but by Domoticz ?? Legacy? Rename these?
@@ -372,14 +375,7 @@ namespace http
 
 			m_pWebEm->RegisterActionCode("uploadfloorplanimage", [this](auto&& session, auto&& req, auto&& redirect_uri) { UploadFloorplanImage(session, req, redirect_uri); });
 
-			// WebServer call that are part of the Domoticz OpenAPI spec
-			m_pWebEm->RegisterPageCode("/api", [this](auto &&session, auto &&req, auto &&rep) { GetApiPage (session, req, rep); });
-			RegisterCommandCode("getappstatus", [this](auto &&session, auto &&req, auto &&root) { Cmd_GetAppStatus(session, req, root); }, true);
-			// End of the OpenAPI list
-
 			m_pWebEm->RegisterActionCode("setopenthermsettings", [this](auto &&session, auto &&req, auto &&redirect_uri) { SetOpenThermSettings(session, req, redirect_uri); });
-			RegisterCommandCode(
-				"sendopenthermcommand", [this](auto&& session, auto&& req, auto&& root) { Cmd_SendOpenThermCommand(session, req, root); }, true);
 
 			m_pWebEm->RegisterActionCode("reloadpiface", [this](auto&& session, auto&& req, auto&& redirect_uri) { ReloadPiFace(session, req, redirect_uri); });
 			m_pWebEm->RegisterActionCode("restoredatabase", [this](auto&& session, auto&& req, auto&& redirect_uri) { RestoreDatabase(session, req, redirect_uri); });
@@ -898,20 +894,6 @@ namespace http
 			reply::set_content(&rep, root.toStyledString());
 		}
 
-		void CWebServer::Cmd_GetTimerTypes(WebEmSession& session, const request& req, Json::Value& root)
-		{
-			root["title"] = "GetTimerTypes";
-			for (int ii = 0; ii < TTYPE_END; ii++)
-			{
-				std::string sTimerTypeDesc = Timer_Type_Desc(_eTimerType(ii));
-				root["result"][ii] = sTimerTypeDesc;
-			}
-			root["status"] = "OK";
-		}
-
-<<<<<<< HEAD
-		void CWebServer::Cmd_GetLanguages(WebEmSession& session, const request& req, Json::Value& root)
-=======
 		// Start OpenAPI specified 
 
 		void CWebServer::GetApiPage(WebEmSession &session, const request &req, reply &rep)
@@ -985,23 +967,32 @@ namespace http
 				return;
 			}
 
-			reply::set_content(&rep, root.toStyledString());
-			rep.status = rStatus;
-			return;
+			// Return the content from the API call (if any)
+			if (!root.empty())
+			{
+				reply::set_content(&rep, root.toStyledString());
+				rep.status = reply::ok;
+			}
+			else
+			{
+				rep.status = reply::no_content;
+			}
 		}
 
-		void CWebServer::Cmd_GetAppStatus(WebEmSession &session, const request &req, Json::Value &root)
+		// End OpenAPI Specific
+
+		void CWebServer::Cmd_GetTimerTypes(WebEmSession& session, const request& req, Json::Value& root)
 		{
-			std::string sValue;
+			root["title"] = "GetTimerTypes";
+			for (int ii = 0; ii < TTYPE_END; ii++)
+			{
+				std::string sTimerTypeDesc = Timer_Type_Desc(_eTimerType(ii));
+				root["result"][ii] = sTimerTypeDesc;
+			}
 			root["status"] = "OK";
-			root["title"] = "GetAppStatus";
-			root["tbd"] = "tbd";
 		}
 
-		// End OpenAPI Specified
-
-		void CWebServer::Cmd_GetLanguage(WebEmSession &session, const request &req, Json::Value &root)
->>>>>>> 874f2be74... Allow for dynamic path processing of /api/*
+		void CWebServer::Cmd_GetLanguages(WebEmSession &session, const request &req, Json::Value &root)
 		{
 			root["title"] = "GetLanguages";
 			std::string sValue;

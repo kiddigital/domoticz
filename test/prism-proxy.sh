@@ -16,20 +16,11 @@ ctrl_c() {
 	exit
 }
 
-echo -n "Checking webroot link to fake data"
+echo -n "Starting Proxy services..."
 
-if [ ! -d "../www/faked" ]; then
-	ln -s ../test/faked ../www/faked
-	echo "created"
-else
-	echo "already exists"
-fi
-
-echo -n "Starting Mock services..."
-
-${prm} mock -h 10.0.2.15 ../OpenAPI/domoticz.openapi_v2.yml &
+${prm} proxy -h 10.0.2.15 ../OpenAPI/domoticz.openapi_v2.yml http://localhost:8080 &
 sleep 1
-${lhd} -D -f lighttpd.conf &
+${lhd} -D -f lighttpd-proxy.conf &
 sleep 1
 
 echo "started"

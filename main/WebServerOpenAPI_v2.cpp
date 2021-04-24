@@ -9,7 +9,7 @@ License: Public domain
 
 ************************************************************************/
 #include "stdafx.h"
-#include "WebServerOpenAPI_v2.hpp"
+#include "WebServerOpenAPI_v2.h"
 #include "Logger.h"
 #include "json_helper.h"
 #include "Helper.h"
@@ -34,6 +34,7 @@ CWebServerOpenAPI_v2::CWebServerOpenAPI_v2()
 	gRegisterCommand("POSTcustomdata", boost::bind(&CWebServerOpenAPI_v2::PostCustomData, this, _1, _2));
 	gRegisterCommand("GETdevice", boost::bind(&CWebServerOpenAPI_v2::GetDevice, this, _1, _2));
 	gRegisterCommand("GETweatherforecastdata", boost::bind(&CWebServerOpenAPI_v2::GetWeatherForecastdata, this, _1, _2));
+	/* Services */
 	gRegisterCommand("GETservicesstatus", boost::bind(&CWebServerOpenAPI_v2::GetServicesStatus, this, _1, _2));
 }
 
