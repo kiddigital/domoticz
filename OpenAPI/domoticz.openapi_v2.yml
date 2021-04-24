@@ -179,6 +179,45 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+  /jwttoken:
+    post:
+      description: |
+        Providing valid credentials, Domoticz returns a JWT accesstoken that can be used as Authentication and Authorization
+        token for subsequent calls to the Domoticz API.
+      tags:
+        - Identity and Access Management
+      parameters:
+        - in: query  
+          name: username
+          schema:
+            type: string
+          required: true
+          description: The name of the user for whom the access token should be granted
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+          description: The clientid and clientsecret as Basic Authentication encoded string
+      responses:
+        '200':
+          description: If all credentials provided check out, than a valid response with an access_token is returned.
+          content:
+            application/json:
+              schema:
+                properties:
+                  access_token:
+                    type: string
+                    description: The JWT access token
+                    example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJEb21Jc3N1ZXIxIiwiZXhwIjoxNjE1NzM0NzA2LCJpYXQiOjE2MTU3MzExMDYsImlzcyI6IkRvbW90aWN6LmNvbSIsIm5iZiI6MTYxNTczMTEwNiwic3ViIjoidGVzdGVyIn0.m14_7PgD0yCocbZqLOwSjZDNLTS1eLv8QyGDnCY01YA"
+                  expires_in:
+                    type: integer
+                    description: The time in seconds that the access_token is valid
+                    example: 3600
+                  token_type:
+                    type: string
+                    maxLength: 6
+                    example: "Bearer"
 components:
   schemas:
     Device:

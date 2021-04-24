@@ -21,7 +21,7 @@ echo -n "Checking webroot link to fake data"
 if [ ! -d "../www/faked" ]; then
 	ln -s ../test/faked ../www/faked
 	echo "created"
-elif
+else
 	echo "already exists"
 fi
 
