@@ -9,7 +9,7 @@ License: Public domain
 
 ************************************************************************/
 #include "stdafx.h"
-#include "WebServerOpenAPI_v2.hpp"
+#include "WebServerOpenAPI_v2.h"
 #include "Logger.h"
 #include "json_helper.h"
 #include "Helper.h"
