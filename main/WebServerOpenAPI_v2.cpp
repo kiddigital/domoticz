@@ -34,6 +34,12 @@ CWebServerOpenAPI_v2::CWebServerOpenAPI_v2()
 	gRegisterCommand("POSTcustomdata", boost::bind(&CWebServerOpenAPI_v2::PostCustomData, this, _1, _2));
 	gRegisterCommand("GETdevice", boost::bind(&CWebServerOpenAPI_v2::GetDevice, this, _1, _2));
 	gRegisterCommand("GETweatherforecastdata", boost::bind(&CWebServerOpenAPI_v2::GetWeatherForecastdata, this, _1, _2));
+	/* IAM */
+	gRegisterCommand("POSTiamauthorize", boost::bind(&CWebServerOpenAPI_v2::PostIAMAuthorize, this, _1, _2));
+	gRegisterCommand("POSTiamtoken", boost::bind(&CWebServerOpenAPI_v2::PostIAMToken, this, _1, _2));
+	gRegisterCommand("GETiamuserinfo", boost::bind(&CWebServerOpenAPI_v2::GetIAMUserinfo, this, _1, _2));
+	gRegisterCommand("POSTintrospect", boost::bind(&CWebServerOpenAPI_v2::PostIntrospect, this, _1, _2));
+	/* Services */
 	gRegisterCommand("GETservicesstatus", boost::bind(&CWebServerOpenAPI_v2::GetServicesStatus, this, _1, _2));
 }
 
@@ -262,6 +268,9 @@ void CWebServerOpenAPI_v2::GetWeatherForecastdata(const Json::Value& input, Json
 	result["Latitude"] = Latitude;
 	result["Longitude"] = Longitude;
 }
+
+// Here we include all methods for all IAM calls (Identity and Access Management)
+#include "WebServerOpenAPI_v2_IAM.cpp"
 
 // Here we include all methods for all Services calls
 #include "WebServerOpenAPI_v2_Services.cpp"

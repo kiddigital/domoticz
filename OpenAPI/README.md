@@ -129,6 +129,16 @@ Queries:
                     /utilities
         * Maybe these should be 'aliasses' for '/devices/#lights'; filter devices on the 'lights' category?
 
+IAM:
+                    /iam/authorize (incl code_challenge = sha256(code_verifier))
+                    /iam/token     (incl clode verifier)
+                    /iam/userinfo
+                    /iam/introspect
+                    /.well-known/openid-configuration
+                    /iam/revoke
+                    /iam/logout
+                    /.well-known/oauth-authorization-server
+
 *list is not 100% complete, but a first draft
 ```
 

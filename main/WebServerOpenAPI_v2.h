@@ -47,6 +47,12 @@ private:
 	void GetDevice(const Json::Value& input, Json::Value& result);
 	void GetWeatherForecastdata(const Json::Value& input, Json::Value& result);
 
+	/* IAM */
+	void PostIAMAuthorize(const Json::Value& input, Json::Value& result);
+	void PostIAMToken(const Json::Value& input, Json::Value& result);
+	void GetIAMUserinfo(const Json::Value& input, Json::Value& result);
+	void PostIntrospect(const Json::Value& input, Json::Value& result);
+
 	/* Services */
 	void GetServicesStatus(const Json::Value& input, Json::Value& result);
 };
