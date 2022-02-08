@@ -300,6 +300,7 @@ hardware/PVOutput_Input.cpp
 hardware/RAVEn.cpp
 hardware/Rego6XXSerial.cpp
 hardware/RelayNet.cpp
+hardware/RFidTimerTCP.cpp
 hardware/RFLinkBase.cpp
 hardware/RFLinkSerial.cpp
 hardware/RFLinkTCP.cpp

@@ -151,6 +151,7 @@
 #include "../hardware/AlfenEve.h"
 #include "../hardware/Enever.h"
 #include "../hardware/MitsubishiWF.h"
+#include "../hardware/RFidTimerTCP.h"
 
 // load notifications configuration
 #include "../notifications/NotificationHelper.h"
@@ -1087,9 +1088,10 @@ bool MainWorker::AddHardwareFromParams(
 	case HTYPE_MitsubishiWF:
 		pHardware = new MitsubishiWF(ID, Address);
 		break;
-
+	case HTYPE_RFidTimerTCP:
+		pHardware = new RFidTimerTCP(ID, Address, Port);
+		break;
 	}
-
 	if (pHardware)
 	{
 		pHardware->HwdType = Type;
