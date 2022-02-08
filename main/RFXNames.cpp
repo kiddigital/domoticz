@@ -279,6 +279,7 @@ static const STR_TABLE_SINGLE HardwareTypeTable[] = {
 	{ HTYPE_MQTTAutoDiscovery, "MQTT Auto Discovery Client Gateway with LAN interface", "MQTT-AD" },
 	{ HTYPE_RFLINKMQTT, "RFLink Gateway MQTT", "RFLink" },
 	{ HTYPE_MitsubishiWF, "Mitsubishi WF RAC Airco with LAN (HTTP) interface", "MitsubishiWF" },
+	{ HTYPE_RFidTimerTCP, "RFid Timer Reader with LAN (TCP) Interface", "RFid Timer" },
 	{ 0, nullptr, nullptr },
 };
 
@@ -3982,6 +3983,7 @@ bool IsNetworkDevice(const _eHardwareTypes htype)
 	case HTYPE_Philips_Hue:
 	case HTYPE_AlfenEveCharger:
 	case HTYPE_MitsubishiWF:
+	case HTYPE_RFidTimerTCP:
 		return true;
 	default:
 		return false;
