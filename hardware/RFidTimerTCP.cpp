@@ -88,6 +88,8 @@ void RFidTimerTCP::Do_Work()
 	Log(LOG_STATUS, "worker started...");
 	Debug(DEBUG_HARDWARE, "Parameters: IPaddress (%s) Port (%d) ReadInterval (%d) TagClosedTime (%d) TagReadTime (%d)", m_szIPAddress.c_str(), m_usIPPort, m_iReadInterval, m_iTagClosedTime, m_iTagReadTime);
 
+	SendCustomSensor(0,0,255,0.0,"Last seen TAG","TAG id");
+
 	uint32_t sec_counter = 0;
 	uint16_t pass_counter = 0;
 	uint16_t read_counter = 0;
@@ -128,7 +130,7 @@ void RFidTimerTCP::Do_Work()
 			}
 			if (noread_counter >= 20)
 			{
-				Log(LOG_STATUS, "No data received after 20 consequtive READS! Reconnecting!");
+				Log(LOG_STATUS, "No data received after 20 consequtive READS! Disconnecting!");
 				disconnect();
 				noread_counter = 0;
 			}
@@ -215,6 +217,7 @@ void RFidTimerTCP::OnData(const unsigned char *pData, size_t length)
 					uiTagID = (uiTagID << 8) + pData[17];
 					uiTagID = (uiTagID << 8) + pData[18];
 					Debug(DEBUG_HARDWARE, "Found TagID (%d)", uiTagID);
+					SendCustomSensor(0,0,255,uiTagID,"Last seen TAG","TAG id");
 				}
 				else if (!(pData[1] == 0x0A && Len == 12))  // Default empty result is 12 bytes (0x0A + Header + Length)
 				{
