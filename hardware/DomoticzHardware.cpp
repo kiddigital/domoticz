@@ -857,6 +857,23 @@ void CDomoticzHardwareBase::SendCustomSensor(const int NodeID, const uint8_t Chi
 	}
 }
 
+float CDomoticzHardwareBase::GetCustomSensor(const int NodeID, const uint8_t ChildID, bool& bExists)
+{
+	bExists = false;
+	std::string sIdx = std_format("%08X", ((NodeID << 8) | ChildID));
+	std::vector<std::vector<std::string> > result;
+
+	result = m_sql.safe_query("SELECT ID, sValue FROM DeviceStatus WHERE (HardwareID==%d) AND (DeviceID=='%q') AND (Type==%d) AND (Subtype==%d)",
+		m_HwdID, sIdx.c_str(), int(pTypeGeneral), int(sTypeCustom));
+	if (!result.empty())
+	{
+		bExists = true;
+		return (float)atof(result[0][1].c_str());
+	}
+
+	return 0.0F;
+}
+
 //wind direction is in steps of 22.5 degrees (360/16)
 void CDomoticzHardwareBase::SendWind(const int NodeID, const int BatteryLevel, const int WindDir, const float WindSpeed, const float WindGust, const float WindTemp, const float WindChill, const bool bHaveWindTemp, const bool bHaveWindChill, const std::string& defaultname, const int RssiLevel /* =12 */)
 {

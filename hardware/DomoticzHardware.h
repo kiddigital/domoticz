@@ -123,6 +123,7 @@ class CDomoticzHardwareBase : public StoppableTask
 	std::string GetTextSensorText(int NodeID, int ChildID, bool &bExists);
 	bool CheckPercentageSensorExists(int NodeID, int ChildID);
 	void SendCustomSensor(int NodeID, uint8_t ChildID, int BatteryLevel, float CustomValue, const std::string &defaultname, const std::string &defaultLabel, int RssiLevel = 12);
+	float GetCustomSensor(const int NodeID, const uint8_t ChildID, bool& bExists);
 	void SendFanSensor(int Idx, int BatteryLevel, int FanSpeed, const std::string &defaultname);
 	void SendSecurity1Sensor(int NodeID, int DeviceSubType, int BatteryLevel, int Status, const std::string &defaultname, const std::string &userName, int RssiLevel = 12);
 	void SendSelectorSwitch(int NodeID, uint8_t ChildID, const std::string &sValue, const std::string &defaultname, int customImage, bool nDropdown, const std::string &LevelNames,
