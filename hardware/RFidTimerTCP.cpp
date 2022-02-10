@@ -2,19 +2,11 @@
 #include "RFidTimerTCP.h"
 #include "../main/Logger.h"
 #include "../main/Helper.h"
-#include "../main/SQLHelper.h"
-#include <iostream>
-#include "../main/localtime_r.h"
 #include "../main/mainworker.h"
 #include "../hardware/hardwaretypes.h"
-#include <json/json.h>
-#include "../tinyxpath/tinyxml.h"
-#include "../main/WebServer.h"
-
-#include <sstream>
 
 #define RETRY_DELAY 30
-#define READ_POLL_MSEC 1000
+#define READ_POLL_MSEC 100
 
 const unsigned char READCMD[6] = { 0xFF, 0x8B, 0x01, 0x00, 0x01, 0xCE };
 
@@ -38,14 +30,14 @@ namespace
 #define IS_HEAD_CHAR(x) ((x) == 0xA0)
 }; // namespace
 
-RFidTimerTCP::RFidTimerTCP(const int ID, const std::string &IPAddress, const unsigned short usIPPort)
-	: m_szIPAddress(IPAddress)
+RFidTimerTCP::RFidTimerTCP(const int ID, const std::string &IPAddress, const unsigned short usIPPort, const int iReadInterval, const int iTagClosedTime, const int iTagReadTime)
+	: m_szIPAddress(IPAddress), m_usIPPort(usIPPort), m_iReadInterval(iReadInterval), m_iTagClosedTime(iTagClosedTime), m_iTagReadTime(iTagReadTime)
 {
 	m_HwdID = ID;
-	m_usIPPort = usIPPort;
 	m_retrycntr = RETRY_DELAY;
 	m_pPartialPkt = nullptr;
 	m_PPktLen = 0;
+	m_uiPacketCnt = 0;
 }
 
 RFidTimerTCP::~RFidTimerTCP()
@@ -82,9 +74,7 @@ bool RFidTimerTCP::StopHardware()
 void RFidTimerTCP::OnConnect()
 {
 	Log(LOG_STATUS, "connected to: %s:%d", m_szIPAddress.c_str(), m_usIPPort);
-	m_bIsStarted = true;
 
-	//SendPacket(READCMD);
 	sOnConnected(this);
 }
 
@@ -96,9 +86,13 @@ void RFidTimerTCP::OnDisconnect()
 void RFidTimerTCP::Do_Work()
 {
 	Log(LOG_STATUS, "worker started...");
+	Debug(DEBUG_HARDWARE, "Parameters: IPaddress (%s) Port (%d) ReadInterval (%d) TagClosedTime (%d) TagReadTime (%d)", m_szIPAddress.c_str(), m_usIPPort, m_iReadInterval, m_iTagClosedTime, m_iTagReadTime);
 
 	uint32_t sec_counter = 0;
 	uint16_t pass_counter = 0;
+	uint16_t read_counter = 0;
+	uint8_t noread_counter = 0;
+
 	connect(m_szIPAddress, m_usIPPort);
 	while (!IsStopRequested(READ_POLL_MSEC))
 	{
@@ -113,17 +107,36 @@ void RFidTimerTCP::Do_Work()
 			{
 				m_LastHeartbeat = mytime(nullptr);
 			}
-			SendReadPacket();
+		}
+
+		if (isConnected())
+		{
+			read_counter++;
+			if (read_counter >= m_iReadInterval)
+			{
+				if (m_uiPacketCnt == 0)
+				{
+					Debug(DEBUG_HARDWARE, "No packets received since last READ command!");
+					noread_counter++;
+				}
+				else
+				{
+					noread_counter = 0;
+				}
+				SendReadPacket();
+				read_counter = 0;
+			}
+			if (noread_counter >= 20)
+			{
+				Log(LOG_STATUS, "No data received after 20 consequtive READS! Reconnecting!");
+				disconnect();
+				noread_counter = 0;
+			}
 		}
 	}
 	terminate();
 
 	Log(LOG_STATUS, "worker stopped...");
-}
-
-void RFidTimerTCP::OnData(const unsigned char *pData, size_t length)
-{
-	ParseData(pData, length);
 }
 
 void RFidTimerTCP::OnError(const boost::system::error_code &error)
@@ -158,7 +171,7 @@ bool RFidTimerTCP::SendReadPacket()
 		return false;
 	}
 
-	Debug(DEBUG_HARDWARE, "Send ReadPacket");
+	Debug(DEBUG_RECEIVED, "Send ReadPacket");
 
 	struct writer_packet *pPkt = (struct writer_packet *)malloc(sizeof(*pPkt));
 
@@ -173,130 +186,57 @@ bool RFidTimerTCP::SendReadPacket()
 
 	write((unsigned char *)pPkt, sizeof(*pPkt));
 	free(pPkt);
+	m_uiPacketCnt = 0;
 	return true;
 }
 
-void RFidTimerTCP::ReceiveMessage(const char *pData, int Len)
+void RFidTimerTCP::OnData(const unsigned char *pData, size_t length)
 {
-	while (Len && (pData[Len - 1] == '\r' || pData[Len - 1] == '\n'))
-		Len--;
+	int Len = (int)length;
 
-	if (Len < 4 || !IS_HEAD_CHAR(pData[Len - 1]))
-		return;
-
-	Log(LOG_NORM, "Packet received: %d %.*s", Len, Len - 1, pData);
-}
-
-void RFidTimerTCP::ParseData(const unsigned char *pData, int Len)
-{
-	Debug(DEBUG_RECEIVED, "Packet Received (%d) %s", Len, ToHexString(pData, Len).c_str());
-	/*
-	if (m_pPartialPkt)
+	if(Len == 12 || Len == 21)
 	{
-		unsigned char *new_data = (unsigned char *)realloc(m_pPartialPkt, m_PPktLen + Len);
-		if (!new_data)
+		// First byte is Header
+		if (pData[0] == 0xA0)
 		{
-			free(m_pPartialPkt);
-			m_pPartialPkt = nullptr;
-			m_PPktLen = 0;
-			Log(LOG_ERROR, "Failed to prepend previous data");
-			// We'll attempt to resync
-		}
-		else
-		{
-			memcpy(new_data + m_PPktLen, pData, Len);
-			m_pPartialPkt = new_data;
-			Len += m_PPktLen;
-			pData = new_data;
-		}
-	}
-	while (Len >= 18)
-	{
-		const struct reader_packet *pkt = (const struct reader_packet *)pData;
-		if (pkt->head != 0x0A)
-		{
-			Len--;
-			pData++;
-			continue;
-		}
-		int data_size = static_cast<int>(ntohl(pkt->data_size));
-		if (Len < 16 + data_size)
-			break;
-
-		ReceiveMessage(pkt->payload, data_size - 2);
-		Len -= 16 + data_size;
-		pData += 16 + data_size;
-	}
-	unsigned char *new_partial = nullptr;
-	if (Len)
-	{
-		if (pData == m_pPartialPkt)
-		{
-			m_PPktLen = Len;
-			return;
-		}
-		new_partial = (unsigned char *)malloc(Len);
-		if (new_partial)
-			memcpy(new_partial, pData, Len);
-		else
-			Len = 0;
-	}
-	free(m_pPartialPkt);
-	m_PPktLen = Len;
-	m_pPartialPkt = new_partial;
-	*/
-}
-
-bool RFidTimerTCP::CustomCommand(const uint64_t /*idx*/, const std::string &sCommand)
-{
-	return SendReadPacket();
-}
-
-// Webserver helpers (TO-DO: if needed?)
-/*
-namespace http
-{
-	namespace server
-	{
-		void CWebServer::Cmd_RFidTimerTCPCommand(WebEmSession &session, const request &req, Json::Value &root)
-		{
-			if (session.rights != 2)
+			if (pData[2] == 0x01 && pData[3] == 0x8B)
 			{
-				session.reply_status = reply::forbidden;
-				return; // Only admin user allowed
-			}
-
-			std::string sIdx = request::findValue(&req, "idx");
-			std::string sAction = request::findValue(&req, "action");
-			if (sIdx.empty())
-				return;
-			// int idx = atoi(sIdx.c_str());
-
-			std::vector<std::vector<std::string>> result;
-			result = m_sql.safe_query("SELECT DS.SwitchType, DS.DeviceID, H.Type, H.ID FROM DeviceStatus DS, Hardware H WHERE (DS.ID=='%q') AND (DS.HardwareID == H.ID)", sIdx.c_str());
-
-			root["status"] = "ERR";
-			if (result.size() == 1)
-			{
-				_eHardwareTypes hType = (_eHardwareTypes)atoi(result[0][2].c_str());
-				switch (hType)
+				m_uiPacketCnt++;
+				// Second byte is payload length
+				if (pData[1] == 0x13 && Len == 21)	// 0x13 + Header + Length = 21 bytes
 				{
-					// We allow raw EISCP commands to be sent on *any* of the logical devices
-					// associated with the hardware.
-					case HTYPE_RFidTimerTCP:
-						CDomoticzHardwareBase *pBaseHardware = m_mainworker.GetHardwareByIDType(result[0][3], HTYPE_RFidTimerTCP);
-						if (pBaseHardware == nullptr)
-							return;
-						RFidTimerTCP *pRFidTimerTCP = reinterpret_cast<RFidTimerTCP *>(pBaseHardware);
-
-						pRFidTimerTCP->SendPacket(sAction.c_str());
-						root["status"] = "OK";
-						root["title"] = "RFidTimerTCPCommand";
-						break;
+					// Seems proper response structure (Header and both Lenght indicators match)
+					// Byte 15-18 contain the Tag Identifier
+					uint32_t uiTagID = 0;
+					uiTagID = (uiTagID << 8) + pData[15];
+					uiTagID = (uiTagID << 8) + pData[16];
+					uiTagID = (uiTagID << 8) + pData[17];
+					uiTagID = (uiTagID << 8) + pData[18];
+					Debug(DEBUG_RECEIVED, "Found TagID (%d)", uiTagID);
 				}
+				else if (!(pData[1] == 0x0A && Len == 12))  // Default empty result is 12 bytes (0x0A + Header + Length)
+				{
+					Debug(DEBUG_RECEIVED, "Packet Received without TagID (%d) %s", Len, ToHexString(pData, Len).c_str());
+				}
+#ifdef _DEBUG
+				else
+				{
+					Debug(DEBUG_RECEIVED, "Ignoring received no data Packet (%d) %s", Len, ToHexString(pData, Len).c_str());
+				}
+#endif
+			}
+			else
+			{
+				Debug(DEBUG_RECEIVED, "Packet does have proper header Byte 0xA0 but does not follow structure. Missing 0x01 0x8B after Length Byte (%d) %s", Len, ToHexString(pData, Len).c_str());
 			}
 		}
-
-	} // namespace server
-} // namespace http
-*/
+		else
+		{
+			Debug(DEBUG_RECEIVED, "Packet does not start with proper header Byte 0xA0 (%d) %s", Len, ToHexString(pData, Len).c_str());
+		}
+	}
+	else
+	{
+		Debug(DEBUG_RECEIVED, "Unexpected Packet Received (%d) %s", Len, ToHexString(pData, Len).c_str());
+	}
+}
