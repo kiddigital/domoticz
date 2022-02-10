@@ -8,6 +8,13 @@
 #define RETRY_DELAY 30
 #define READ_POLL_MSEC 100
 
+#define HEAD_CHAR 0xA0
+
+#define SENSOR_NODE_ID 0
+#define SENSOR_CHILD_ID 0
+#define SENSOR_NAME "Last seen TAG"
+#define SENSOR_LABEL "TAG id"
+
 const unsigned char READCMD[6] = { 0xFF, 0x8B, 0x01, 0x00, 0x01, 0xCE };
 
 namespace
@@ -26,8 +33,6 @@ namespace
 		uint8_t payload_size;
 		char payload[6];
 	};
-
-#define IS_HEAD_CHAR(x) ((x) == 0xA0)
 }; // namespace
 
 RFidTimerTCP::RFidTimerTCP(const int ID, const std::string &IPAddress, const unsigned short usIPPort, const int iReadInterval, const int iTagClosedTime, const int iTagReadTime)
@@ -37,7 +42,7 @@ RFidTimerTCP::RFidTimerTCP(const int ID, const std::string &IPAddress, const uns
 	m_retrycntr = RETRY_DELAY;
 	m_pPartialPkt = nullptr;
 	m_PPktLen = 0;
-	m_uiPacketCnt = 0;
+	m_uiPacketCnt = 999;
 }
 
 RFidTimerTCP::~RFidTimerTCP()
@@ -88,12 +93,15 @@ void RFidTimerTCP::Do_Work()
 	Log(LOG_STATUS, "worker started...");
 	Debug(DEBUG_HARDWARE, "Parameters: IPaddress (%s) Port (%d) ReadInterval (%d) TagClosedTime (%d) TagReadTime (%d)", m_szIPAddress.c_str(), m_usIPPort, m_iReadInterval, m_iTagClosedTime, m_iTagReadTime);
 
-	SendCustomSensor(0,0,255,0.0,"Last seen TAG","TAG id");
+	bool bExists = false;
+	float fCurValue = GetCustomSensor(SENSOR_NODE_ID, SENSOR_CHILD_ID, bExists);
+	if (!bExists)
+		SendCustomSensor(SENSOR_NODE_ID, SENSOR_CHILD_ID, 255, 0.0F, SENSOR_NAME, SENSOR_LABEL);
 
 	uint32_t sec_counter = 0;
 	uint16_t pass_counter = 0;
-	uint16_t read_counter = 0;
 	uint8_t noread_counter = 0;
+	uint16_t read_counter = m_iReadInterval;	// Start with reading right away
 
 	connect(m_szIPAddress, m_usIPPort);
 	while (!IsStopRequested(READ_POLL_MSEC))
@@ -125,8 +133,8 @@ void RFidTimerTCP::Do_Work()
 				{
 					noread_counter = 0;
 				}
-				SendReadPacket();
 				read_counter = 0;
+				SendReadPacket();
 			}
 			if (noread_counter >= 20)
 			{
@@ -177,7 +185,7 @@ bool RFidTimerTCP::SendReadPacket()
 
 	struct writer_packet *pPkt = (struct writer_packet *)malloc(sizeof(*pPkt));
 
-	pPkt->head = 0xA0;
+	pPkt->head = HEAD_CHAR;
 	pPkt->payload_size = sizeof(READCMD);
 	memcpy(pPkt->payload, READCMD, sizeof(READCMD));
 
@@ -199,7 +207,7 @@ void RFidTimerTCP::OnData(const unsigned char *pData, size_t length)
 	if(Len == 12 || Len == 21)
 	{
 		// First byte is Header
-		if (pData[0] == 0xA0)
+		if (pData[0] == HEAD_CHAR)
 		{
 			if (pData[2] == 0x01 && pData[3] == 0x8B)
 			{
@@ -217,7 +225,7 @@ void RFidTimerTCP::OnData(const unsigned char *pData, size_t length)
 					uiTagID = (uiTagID << 8) + pData[17];
 					uiTagID = (uiTagID << 8) + pData[18];
 					Debug(DEBUG_HARDWARE, "Found TagID (%d)", uiTagID);
-					SendCustomSensor(0,0,255,uiTagID,"Last seen TAG","TAG id");
+					SendCustomSensor(SENSOR_NODE_ID, SENSOR_CHILD_ID, 255, uiTagID, SENSOR_NAME, SENSOR_LABEL);
 				}
 				else if (!(pData[1] == 0x0A && Len == 12))  // Default empty result is 12 bytes (0x0A + Header + Length)
 				{
@@ -232,12 +240,12 @@ void RFidTimerTCP::OnData(const unsigned char *pData, size_t length)
 			}
 			else
 			{
-				Debug(DEBUG_RECEIVED, "Packet does have proper header Byte 0xA0 but does not follow structure. Missing 0x01 0x8B after Length Byte (%d) %s", Len, ToHexString(pData, Len).c_str());
+				Debug(DEBUG_RECEIVED, "Packet does have proper header Byte but does not follow structure. Missing 0x01 0x8B after Length Byte (%d) %s", Len, ToHexString(pData, Len).c_str());
 			}
 		}
 		else
 		{
-			Debug(DEBUG_RECEIVED, "Packet does not start with proper header Byte 0xA0 (%d) %s", Len, ToHexString(pData, Len).c_str());
+			Debug(DEBUG_RECEIVED, "Packet does not start with proper header Byte (%d) %s", Len, ToHexString(pData, Len).c_str());
 		}
 	}
 	else
