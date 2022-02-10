@@ -202,6 +202,8 @@ void RFidTimerTCP::OnData(const unsigned char *pData, size_t length)
 			if (pData[2] == 0x01 && pData[3] == 0x8B)
 			{
 				m_uiPacketCnt++;
+				SetHeartbeatReceived();
+
 				// Second byte is payload length
 				if (pData[1] == 0x13 && Len == 21)	// 0x13 + Header + Length = 21 bytes
 				{
@@ -212,7 +214,7 @@ void RFidTimerTCP::OnData(const unsigned char *pData, size_t length)
 					uiTagID = (uiTagID << 8) + pData[16];
 					uiTagID = (uiTagID << 8) + pData[17];
 					uiTagID = (uiTagID << 8) + pData[18];
-					Debug(DEBUG_RECEIVED, "Found TagID (%d)", uiTagID);
+					Debug(DEBUG_HARDWARE, "Found TagID (%d)", uiTagID);
 				}
 				else if (!(pData[1] == 0x0A && Len == 12))  // Default empty result is 12 bytes (0x0A + Header + Length)
 				{
