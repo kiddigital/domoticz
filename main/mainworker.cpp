@@ -1117,7 +1117,7 @@ bool MainWorker::AddHardwareFromParams(
 		break;
 
 	case HTYPE_RFidTimerTCP:
-		pHardware = new RFidTimerTCP(ID, Address, Port);
+		pHardware = new RFidTimerTCP(ID, Address, Port, Mode1, Mode2, Mode3);
 		break;
 	}
 	if (pHardware)
