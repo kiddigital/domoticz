@@ -27,7 +27,7 @@ namespace
 		uint8_t head;
 		uint8_t payload_size;
 		uint16_t readerid;
-		uint16_t inputid;
+		uint8_t signal;
 		uint32_t tagid;
 		uint8_t checksum;
 	};
@@ -212,6 +212,11 @@ bool RFidTimerTCP::SendReadPacket()
 
 void RFidTimerTCP::OnData(const unsigned char *pData, size_t length)
 {
+	struct tm timeinfo;
+	struct timeval tv;
+	CurrentDateTimeMillisecond(timeinfo, tv);
+	std::string sCurTime = TimeToString(nullptr, TF_DateTimeMs);
+
 	int Len = (int)length;
 
 	if(Len >= 12 && pData[0] == HEAD_CHAR)
@@ -239,8 +244,7 @@ void RFidTimerTCP::OnData(const unsigned char *pData, size_t length)
 					pPkt->payload_size = pData[1 + uiMessageCnt];
 					pPkt->readerid = pData[2 + uiMessageCnt];
 					pPkt->readerid = (pPkt->readerid << 8) + pData[3 + uiMessageCnt];
-					pPkt->inputid = pData[4 + uiMessageCnt];
-					pPkt->inputid = (pPkt->inputid << 8) + pData[5 + uiMessageCnt];
+					pPkt->signal = pData[4 + uiMessageCnt];
 					pPkt->tagid = pData[15 + uiMessageCnt];
 					pPkt->tagid = (pPkt->tagid << 8) + pData[16 + uiMessageCnt];
 					pPkt->tagid = (pPkt->tagid << 8) + pData[17 + uiMessageCnt];
@@ -249,10 +253,15 @@ void RFidTimerTCP::OnData(const unsigned char *pData, size_t length)
 					// To-do: Validate received bytes with received checksum
 
 					uint32_t uiTagID = pPkt->tagid;
-					Debug(DEBUG_HARDWARE, "Found TagID (%d) on input (%d) from reader (%d) in Packet (%d) %s", uiTagID, pPkt->inputid, pPkt->readerid, Len, ToHexString(pData, Len).c_str());
+					Debug(DEBUG_HARDWARE, "Found TagID (%d) (signal (%d), Packetlength (%d))", uiTagID, pPkt->signal, Len);
+					Debug(DEBUG_RECEIVED, "Found TagID (%d) in Packet (%d) %s", uiTagID, Len, ToHexString(pData, Len).c_str());
+					free(pPkt);
+
 					SendCustomSensor(SENSOR_NODE_ID, SENSOR_CHILD_ID, 255, uiTagID, SENSOR_NAME, SENSOR_LABEL);
 
-					free(pPkt);
+					uint8_t uiTagChild = 0;
+					std::string sTag = "Tag " + std::to_string(uiTagID);
+					SendTextSensor(uiTagID, uiTagChild, 255, sCurTime, sTag);
 
 					uiMessageCnt = uiMessageCnt + 21;
 				}
