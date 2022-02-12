@@ -10,21 +10,26 @@
 
 #define HEAD_CHAR 0xA0
 
+#define READINTERVAL_DEFAULT 10
+#define TAGCLOSEDTIME_DEFAULT 5
+#define TAGREADTIME_DEFAULT 5
+
 #define SENSOR_NODE_ID 0
 #define SENSOR_CHILD_ID 0
 #define SENSOR_NAME "Last seen TAG"
 #define SENSOR_LABEL "TAG id"
 
 const unsigned char READCMD[6] = { 0xFF, 0x8B, 0x01, 0x00, 0x01, 0xCE };
-
 namespace
 {
 	struct reader_packet
 	{
 		uint8_t head;
 		uint8_t payload_size;
-		uint8_t readerid;
-		char payload[0];
+		uint16_t readerid;
+		uint16_t inputid;
+		uint32_t tagid;
+		uint8_t checksum;
 	};
 
 	struct writer_packet
@@ -40,14 +45,19 @@ RFidTimerTCP::RFidTimerTCP(const int ID, const std::string &IPAddress, const uns
 {
 	m_HwdID = ID;
 	m_retrycntr = RETRY_DELAY;
-	m_pPartialPkt = nullptr;
 	m_PPktLen = 0;
 	m_uiPacketCnt = 999;
+
+	if(m_iReadInterval < 1)
+		m_iReadInterval = READINTERVAL_DEFAULT;
+	if(m_iTagClosedTime < 1)
+		m_iTagClosedTime = TAGCLOSEDTIME_DEFAULT;
+	if(m_iTagReadTime < 1)
+		m_iTagReadTime = TAGREADTIME_DEFAULT;
 }
 
 RFidTimerTCP::~RFidTimerTCP()
 {
-	free(m_pPartialPkt);
 }
 
 bool RFidTimerTCP::StartHardware()
@@ -185,14 +195,14 @@ bool RFidTimerTCP::SendReadPacket()
 
 	struct writer_packet *pPkt = (struct writer_packet *)malloc(sizeof(*pPkt));
 
-	pPkt->head = HEAD_CHAR;
-	pPkt->payload_size = sizeof(READCMD);
-	memcpy(pPkt->payload, READCMD, sizeof(READCMD));
-
 	if (!pPkt)
 	{
 		return false;
 	}
+
+	pPkt->head = HEAD_CHAR;
+	pPkt->payload_size = sizeof(READCMD);
+	memcpy(pPkt->payload, READCMD, sizeof(READCMD));
 
 	write((unsigned char *)pPkt, sizeof(*pPkt));
 	free(pPkt);
@@ -204,48 +214,69 @@ void RFidTimerTCP::OnData(const unsigned char *pData, size_t length)
 {
 	int Len = (int)length;
 
-	if(Len == 12 || Len == 21)
+	if(Len >= 12 && pData[0] == HEAD_CHAR)
 	{
-		// First byte is Header
-		if (pData[0] == HEAD_CHAR)
+		if (pData[2] == 0x01 && pData[3] == 0x8B)
 		{
-			if (pData[2] == 0x01 && pData[3] == 0x8B)
-			{
-				m_uiPacketCnt++;
-				SetHeartbeatReceived();
+			// Received valid packet
+			m_uiPacketCnt++;
+			SetHeartbeatReceived();
 
-				// Second byte is payload length
-				if (pData[1] == 0x13 && Len == 21)	// 0x13 + Header + Length = 21 bytes
+			uint8_t uiMessageCnt = 0;
+			while (uiMessageCnt < Len)
+			{
+				if (pData[0 + uiMessageCnt] == HEAD_CHAR && pData[1 + uiMessageCnt] == 0x13)
 				{
-					// Seems proper response structure (Header and both Lenght indicators match)
-					// Byte 15-18 contain the Tag Identifier
-					uint32_t uiTagID = 0;
-					uiTagID = (uiTagID << 8) + pData[15];
-					uiTagID = (uiTagID << 8) + pData[16];
-					uiTagID = (uiTagID << 8) + pData[17];
-					uiTagID = (uiTagID << 8) + pData[18];
-					Debug(DEBUG_HARDWARE, "Found TagID (%d)", uiTagID);
+					// Seems proper response structure (Header and Lenght indicators match)
+					struct reader_packet *pPkt = (struct reader_packet *)malloc(sizeof(*pPkt));
+
+					if (!pPkt)
+					{
+						return;
+					}
+
+					pPkt->head = pData[0 + uiMessageCnt];
+					pPkt->payload_size = pData[1 + uiMessageCnt];
+					pPkt->readerid = pData[2 + uiMessageCnt];
+					pPkt->readerid = (pPkt->readerid << 8) + pData[3 + uiMessageCnt];
+					pPkt->inputid = pData[4 + uiMessageCnt];
+					pPkt->inputid = (pPkt->inputid << 8) + pData[5 + uiMessageCnt];
+					pPkt->tagid = pData[15 + uiMessageCnt];
+					pPkt->tagid = (pPkt->tagid << 8) + pData[16 + uiMessageCnt];
+					pPkt->tagid = (pPkt->tagid << 8) + pData[17 + uiMessageCnt];
+					pPkt->tagid = (pPkt->tagid << 8) + pData[18 + uiMessageCnt];
+					pPkt->checksum = pData[20 + uiMessageCnt];
+					// To-do: Validate received bytes with received checksum
+
+					uint32_t uiTagID = pPkt->tagid;
+					Debug(DEBUG_HARDWARE, "Found TagID (%d) on input (%d) from reader (%d) in Packet (%d) %s", uiTagID, pPkt->inputid, pPkt->readerid, Len, ToHexString(pData, Len).c_str());
 					SendCustomSensor(SENSOR_NODE_ID, SENSOR_CHILD_ID, 255, uiTagID, SENSOR_NAME, SENSOR_LABEL);
+
+					free(pPkt);
+
+					uiMessageCnt = uiMessageCnt + 21;
 				}
-				else if (!(pData[1] == 0x0A && Len == 12))  // Default empty result is 12 bytes (0x0A + Header + Length)
+				else if (pData[0 + uiMessageCnt] == HEAD_CHAR && pData[1 + uiMessageCnt] == 0x0A)
 				{
-					Debug(DEBUG_RECEIVED, "Packet Received without TagID (%d) %s", Len, ToHexString(pData, Len).c_str());
-				}
+					// No Data message
+					uiMessageCnt = uiMessageCnt + 12;
 #ifdef _DEBUG
+					Debug(DEBUG_RECEIVED, "Ignoring received No Data Message (%d) %s", Len, ToHexString(pData, Len).c_str());
+#endif
+				}
 				else
 				{
-					Debug(DEBUG_RECEIVED, "Ignoring received no data Packet (%d) %s", Len, ToHexString(pData, Len).c_str());
+					Debug(DEBUG_RECEIVED, "Packet Received without TagID (%d) %s", Len, ToHexString(pData, Len).c_str());
+					while (uiMessageCnt < Len && pData[uiMessageCnt] != HEAD_CHAR)
+					{
+						uiMessageCnt++;
+					}
 				}
-#endif
-			}
-			else
-			{
-				Debug(DEBUG_RECEIVED, "Packet does have proper header Byte but does not follow structure. Missing 0x01 0x8B after Length Byte (%d) %s", Len, ToHexString(pData, Len).c_str());
 			}
 		}
 		else
 		{
-			Debug(DEBUG_RECEIVED, "Packet does not start with proper header Byte (%d) %s", Len, ToHexString(pData, Len).c_str());
+			Debug(DEBUG_RECEIVED, "Packet does have proper header Byte but does not follow structure. Missing 0x01 0x8B after Length Byte (%d) %s", Len, ToHexString(pData, Len).c_str());
 		}
 	}
 	else
