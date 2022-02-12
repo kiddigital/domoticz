@@ -24,7 +24,6 @@ class RFidTimerTCP : public CDomoticzHardwareBase, ASyncTCP
 
       private:
 	int m_retrycntr;
-	unsigned char *m_pPartialPkt;
 	int m_PPktLen;
 	std::string m_szIPAddress;
 	unsigned short m_usIPPort;
