@@ -56,7 +56,7 @@ jobs:
           echo "${PR_NR}"
           echo "${PR_EVENT}"
           echo "GHNUMBER ${{ github.event.pull_request.number }}"
-          echo "GHRUNNR ${{ github.run.number }}"
-          echo "GHRUNNR2 ${{ github.event.pull_request.run.number }}"
+          echo "GHRUNNR ${{ github.run_number }}"
+          echo "GHRUNNR2 ${GITHUB_RUN_NUMBER}"
           env|sort
           
