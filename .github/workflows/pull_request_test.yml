@@ -17,7 +17,7 @@ on:
 
 env:
   PR_NR: ${{ github.event.pull_request.number }}
-  PR_EVENT: ${{ github.run.number }}
+  PR_EVENT: ${{ github.event.run.number }}
 
 jobs:
   # This workflow contains a single job called "build"
@@ -46,7 +46,7 @@ jobs:
           fi
           buildnr=$(git rev-list HEAD --count)
           echo "BUILDNR=$(($buildnr + 2107))" >> $GITHUB_ENV
-          echo "Building Domoticz version (($buildnr + 2107)) from branch ${GITHUB_HEAD_REF}"
+          echo "Building Domoticz version $(($buildnr + 2107)) from branch ${GITHUB_HEAD_REF}"
 
       - name: show environment
         run: |
@@ -56,7 +56,7 @@ jobs:
           echo "${PR_NR}"
           echo "${PR_EVENT}"
           echo "GHNUMBER ${{ github.event.pull_request.number }}"
-          echo "GHRUNNR ${{ github.event.run.number }}"
-          echo "$GITHUB_CONTEXT"
+          echo "GHRUNNR ${{ github.run.number }}"
+          echo "GHRUNNR2 ${{ github.event.pull_request.run.number }}"
           env|sort
           
