@@ -8,7 +8,6 @@ on:
       - test
     paths-ignore:
       - 'msbuild/**'
-      - '.github/**'
       - 'tools/**'
       - '**.md'
       - '**.txt'
@@ -18,6 +17,8 @@ on:
 
 env:
   PR_NR: ${{ github.event.issue.number }}
+  PR_TEST: "justtesting"
+  PR_EVENT: ${{ github.event.pull_request.number }}
 
 jobs:
   # This workflow contains a single job called "build"
@@ -50,5 +51,7 @@ jobs:
       - name: show environment
         run: |
           echo "${BUILDNR}"
+          echo "${BRANCH_NAME}"
           echo "${PR_NR}"
-          echo "${"BRANCH_NAME}"
+          echo "${PR_TEST}"
+          echo "${PR_EVENT}"
