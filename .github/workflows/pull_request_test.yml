@@ -16,9 +16,9 @@ on:
   workflow_dispatch:
 
 env:
-  PR_NR: ${{ github.event.issue.number }}
+  PR_NR: ${{ github.event.pull_request.number }}
   PR_TEST: "justtesting"
-  PR_EVENT: ${{ github.event.pull_request.number }}
+  PR_EVENT: ${{ github.event.pull_request.action }}
 
 jobs:
   # This workflow contains a single job called "build"
@@ -51,6 +51,7 @@ jobs:
       - name: show environment
         run: |
           echo "${BUILDNR}"
+          echo "${PRNUMBER}"
           echo "${BRANCH_NAME}"
           echo "${PR_NR}"
           echo "${PR_TEST}"
