@@ -57,3 +57,7 @@ jobs:
           echo "${PR_TEST}"
           echo "${PR_EVENT}"
           echo "GHNUMBER ${{ github.event.pull_request.number }}"
+          echo "GHEVENT ${{ github.event }}"
+          echo "${GITHUB_CONTEXT}"
+          env
+          
