@@ -18,7 +18,7 @@ on:
 env:
   PR_NR: ${{ github.event.pull_request.number }}
   PR_TEST: "justtesting"
-  PR_EVENT: ${{ github.event.pull_request.action }}
+  PR_EVENT: ${{ github.event.action }}
 
 jobs:
   # This workflow contains a single job called "build"
@@ -56,3 +56,4 @@ jobs:
           echo "${PR_NR}"
           echo "${PR_TEST}"
           echo "${PR_EVENT}"
+          echo "GHNUMBER ${{ github.event.pull_request.number }}"
