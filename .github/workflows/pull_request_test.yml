@@ -1,0 +1,54 @@
+name: Domoticz PR Test
+
+on:
+  pull_request:
+    branches:
+      - development
+      - master
+      - test
+    paths-ignore:
+      - 'msbuild/**'
+      - '.github/**'
+      - 'tools/**'
+      - '**.md'
+      - '**.txt'
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+env:
+  PR_NR: ${{ github.event.issue.number }}
+
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      # Prepare environment
+      - name: prepare environment
+        run: |
+          sudo timedatectl set-timezone Europe/Amsterdam
+          echo "${GITHUB_EVENT_NAME}"
+          if [ "${GITHUB_EVENT_NAME}" == 'pull_request' ]; then
+            echo "BRANCH_NAME=$(echo ${GITHUB_HEAD_REF} | tr / -)" >> $GITHUB_ENV
+            echo "PRNUMBER=$(echo ${PR_NR})" >> $GITHUB_ENV
+          else
+            echo "BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | tr / -)" >> $GITHUB_ENV
+            echo "PRNUMBER=$(echo ${GITHUB_SHA})" >> $GITHUB_ENV
+          fi
+          buildnr=$(git rev-list HEAD --count)
+          echo "BUILDNR=$(($buildnr + 2107))" >> $GITHUB_ENV
+
+      - name: show environment
+        run: |
+          echo "${BUILDNR}"
+          echo "${PR_NR}"
+          echo "${"BRANCH_NAME}"
