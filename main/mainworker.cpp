@@ -19,6 +19,9 @@
 #include <algorithm>
 #include <set>
 
+#include "mdns_cpp/logger.hpp"
+#include "mdns_cpp/mdns.hpp"
+
 //Hardware Devices
 #include "../hardware/hardwaretypes.h"
 #include "../hardware/RFXBase.h"
@@ -1190,6 +1193,14 @@ bool MainWorker::Start()
 
 		LoadSharedUsers();
 	}
+
+	mdns_cpp::Logger::setLoggerSink([](const std::string& log_msg) {
+		_log.Debug(DEBUG_NORM, "mDNS: %s", log_msg.c_str());
+	});
+
+	mdns_cpp::mDNS mdns;
+	mdns.setServiceHostname("airforce1");
+	mdns.startService();
 
 	HandleHourPrice();
 
@@ -12892,8 +12903,8 @@ bool MainWorker::SetSetPointInt(const std::vector<std::string>& sd, const float 
 
 		if (
 			(value_unit.empty())
-			|| (value_unit == "°C")
-			|| (value_unit == "°F")
+			|| (value_unit == "ï¿½C")
+			|| (value_unit == "ï¿½F")
 			|| (value_unit == "C")
 			|| (value_unit == "F")
 			)
