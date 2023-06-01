@@ -30,6 +30,7 @@ option(USE_PYTHON "Use Python for Plugins and Event-Scripts" YES)
 option(INCLUDE_LINUX_I2C "Include I2C support" YES)
 option(INCLUDE_SPI "Include SPI support" YES)
 option(WITH_LIBUSB "Enable libusb support" YES)
+option(USE_MDNS "Enable mDNS support" YES)
 
 # Link static or shared, external dependencies
 option(USE_LUA_STATIC "Link LUA static" YES)
@@ -778,7 +779,17 @@ ELSE()
   message(STATUS "Not found telldus-core (telldus-core.h), not adding tellstick support")
 ENDIF(TELLDUSCORE_INCLUDE)
 
-target_link_libraries(domoticz ${Boost_LIBRARIES} ${ZLIB_LIBRARIES} ${MINIZIP_LIBRARIES} ${CURL_LIBRARIES} pthread ${MQTT_LIBRARIES} ${LUA_LIBRARIES} ${CMAKE_DL_LIBS} ${TELLDUS_LIBRARIES})
+#
+# mDNS support (RFC6762)
+#
+IF(USE_MDNS)
+  add_subdirectory (extern/mdns_cpp EXCLUDE_FROM_ALL)
+  target_link_libraries(domoticz mdns_cpp)
+  INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/extern/mdns_cpp)
+  message(STATUS "mDNS support enabled")
+  ENDIF(USE_MDNS)
+
+target_link_libraries(domoticz ${Boost_LIBRARIES} ${ZLIB_LIBRARIES} ${MINIZIP_LIBRARIES} ${CURL_LIBRARIES} pthread ${MQTT_LIBRARIES} ${LUA_LIBRARIES} ${CMAKE_DL_LIBS} ${TELLDUS_LIBRARIES} ${mdns_cpp_LIBRARIES})
 target_link_libraries(domoticztester ${Boost_LIBRARIES} ${ZLIB_LIBRARIES} ${MINIZIP_LIBRARIES} ${CURL_LIBRARIES} pthread ${MQTT_LIBRARIES} ${LUA_LIBRARIES} ${CMAKE_DL_LIBS} ${TELLDUS_LIBRARIES})
 
 IF(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
