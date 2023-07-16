@@ -352,7 +352,7 @@ namespace http
 			}
 
 			// WebServer call that handles the part under the Domoticz OpenAPI spec
-			m_pWebEm->RegisterPageCode("/api", [this](auto &&session, auto &&req, auto &&rep) { GetApiPage(session, req, rep); });
+			m_pWebEm->RegisterPageCode("/api", [this](auto &&session, auto &&req, auto &&rep) { GetApiPage(session, req, rep); }, true);
 
 			m_pWebEm->RegisterPageCode("/json.htm", [this](auto&& session, auto&& req, auto&& rep) { GetJSonPage(session, req, rep); });
 			// These 'Pages' should probably be 'moved' to become Command codes handled by the 'json.htm API', so we get all API calls through one entry point

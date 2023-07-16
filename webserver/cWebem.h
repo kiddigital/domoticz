@@ -14,6 +14,7 @@ namespace http
 			URIGHTS_VIEWER = 0,
 			URIGHTS_SWITCHER,
 			URIGHTS_ADMIN,
+			URIGHTS_NONE=254,
 			URIGHTS_CLIENTID=255
 		};
 		enum _eAuthenticationMethod
