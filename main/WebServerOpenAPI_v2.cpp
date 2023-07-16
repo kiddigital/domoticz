@@ -15,10 +15,10 @@ License: Public domain
 #include "Helper.h"
 #include "SQLHelper.h"
 #include "mainworker.h"
+#include "../webserver/cWebem.h"
 #include "../webserver/reply.hpp"
 #include <sstream>
-#include <iomanip>
-#include <boost/bind/bind.hpp>
+//#include <iomanip>
 
 using namespace boost::placeholders;
 
@@ -30,12 +30,11 @@ CWebServerOpenAPI_v2::CWebServerOpenAPI_v2()
 
 	// List of the commands available to register with their command name
 	// NOTE: make sure the request method (GET, POST, DELETE, etc) is written in CAPS and the rest in lowercase!
-	gRegisterCommand("GETcustomdata", boost::bind(&CWebServerOpenAPI_v2::GetCustomData, this, _1, _2));
-	gRegisterCommand("POSTcustomdata", boost::bind(&CWebServerOpenAPI_v2::PostCustomData, this, _1, _2));
-	gRegisterCommand("GETdevice", boost::bind(&CWebServerOpenAPI_v2::GetDevice, this, _1, _2));
-	gRegisterCommand("GETweatherforecastdata", boost::bind(&CWebServerOpenAPI_v2::GetWeatherForecastdata, this, _1, _2));
+	gRegisterCommand("GETcustomdata", [this](auto&& input, auto&& result) { GetCustomData(input, result); }, http::server::URIGHTS_NONE);
+	gRegisterCommand("POSTcustomdata", [this](auto&& input, auto&& result) { PostCustomData(input, result); }, http::server::URIGHTS_ADMIN);
+	gRegisterCommand("GETdevice", [this](auto&& input, auto&& result) { GetDevice(input, result); }, http::server::URIGHTS_VIEWER);
 	/* Services */
-	gRegisterCommand("GETservicesstatus", boost::bind(&CWebServerOpenAPI_v2::GetServicesStatus, this, _1, _2));
+	gRegisterCommand("GETservicesstatus", [this](auto&& input, auto&& result) { GetServicesStatus(input, result); }, http::server::URIGHTS_NONE);
 }
 
 CWebServerOpenAPI_v2::~CWebServerOpenAPI_v2()
@@ -174,9 +173,10 @@ bool CWebServerOpenAPI_v2::gParseURI(const std::string uri)
 	return true;
 }
 
-void CWebServerOpenAPI_v2::gRegisterCommand(const char* command, openapi_command_function CommandFunction)
+void CWebServerOpenAPI_v2::gRegisterCommand(const char* command, openapi_command_function CommandFunction, const uint8_t rights)
 {
 	m_openapicommands.insert(std::pair<std::string, openapi_command_function >(std::string(command), CommandFunction));
+	m_openapicommandrights.insert(std::pair<std::string, uint8_t >(std::string(command), rights));
 }
 
 bool CWebServerOpenAPI_v2::gFindCommand(const std::string& command)
@@ -239,29 +239,6 @@ void CWebServerOpenAPI_v2::GetDevice(const Json::Value& input, Json::Value& resu
 			m_httpresult.status = http::server::reply::not_found;
 		}
 	}
-}
-
-void CWebServerOpenAPI_v2::GetWeatherForecastdata(const Json::Value& input, Json::Value& result)
-{
-	result["function"] = "GetWeatherForecastdata";
-	result["params"] = input;
-
-	std::string Latitude = "1";
-	std::string Longitude = "1";
-	std::string sValue;
-	if (m_sql.GetPreferencesVar("Location", sValue))
-	{
-		std::vector<std::string> strarray;
-		StringSplit(sValue, ";", strarray);
-
-		if (strarray.size() == 2)
-		{
-			Latitude = strarray[0];
-			Longitude = strarray[1];
-		}
-	}
-	result["Latitude"] = Latitude;
-	result["Longitude"] = Longitude;
 }
 
 // Here we include all methods for all Services calls

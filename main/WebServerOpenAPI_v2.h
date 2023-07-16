@@ -10,12 +10,11 @@ License: Public domain
 ************************************************************************/
 #pragma once
 #include <string>
-#include <boost/function.hpp>
 #include "../webserver/reply.hpp"
 
 class CWebServerOpenAPI_v2
 {
-	typedef boost::function< void(const Json::Value &input, Json::Value &result) > openapi_command_function;
+	typedef std::function< void(const Json::Value &input, Json::Value &result) > openapi_command_function;
 public:
 	CWebServerOpenAPI_v2();
 	~CWebServerOpenAPI_v2(void);
@@ -25,11 +24,12 @@ public:
 private:
 	void gInit();
 	bool gParseURI(const std::string uri);
-	void gRegisterCommand(const char* command, openapi_command_function CommandFunction);
+	void gRegisterCommand(const char* command, openapi_command_function CommandFunction, const uint8_t rights);
 	bool gFindCommand(const std::string& command);
 	bool gHandleCommand(const std::string& command, const Json::Value& input, Json::Value& result);
 
 	std::map < std::string, openapi_command_function > m_openapicommands;
+	std::map < std::string, uint8_t > m_openapicommandrights;
 
 	http::server::reply m_httpresult;
 	std::string m_uri;
@@ -45,7 +45,6 @@ private:
 	void GetCustomData(const Json::Value& input, Json::Value& result);
 	void PostCustomData(const Json::Value& input, Json::Value& result);
 	void GetDevice(const Json::Value& input, Json::Value& result);
-	void GetWeatherForecastdata(const Json::Value& input, Json::Value& result);
 
 	/* Services */
 	void GetServicesStatus(const Json::Value& input, Json::Value& result);
