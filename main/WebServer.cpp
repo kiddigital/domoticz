@@ -900,7 +900,7 @@ namespace http
 		{
 			Json::Value root;
 
-			//_log.Debug(DEBUG_WEBSERVER,"Handling /API for (%s) %s", req.method.c_str(), req.uri.c_str());
+			//_log.Debug(DEBUG_WEBSERVER,"Handling /API for (%s) %s (with rights %d)", req.method.c_str(), req.uri.c_str(), session.rights);
 
 			// Check version, handle v2
 			if (req.uri.find("/api/v2/") == 0)
@@ -909,14 +909,15 @@ namespace http
 				{
 					try
 					{
-						if(!m_pWebOpenAPI_v2->gHandleRequest(req.method, req.uri, req.parameters, root))
+						if(m_pWebOpenAPI_v2->gHandleRequest(req.method, req.uri, req.parameters, (int8_t)session.rights))
 						{
-							rep.status = reply::not_found;
-							return;
+							rep.status = m_pWebOpenAPI_v2->gGetResultCode();
+							root = m_pWebOpenAPI_v2->gGetResultJSON();
 						}
 						else
 						{
-							rep.status = m_pWebOpenAPI_v2->gGetResultCode();
+							rep.status = reply::not_found;
+							return;
 						}
 					}
 					catch(const std::exception& e)
@@ -971,11 +972,6 @@ namespace http
 			if (!root.empty())
 			{
 				reply::set_content(&rep, root.toStyledString());
-				rep.status = reply::ok;
-			}
-			else
-			{
-				rep.status = reply::no_content;
 			}
 		}
 
