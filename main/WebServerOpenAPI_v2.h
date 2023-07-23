@@ -19,8 +19,9 @@ public:
 	CWebServerOpenAPI_v2();
 	~CWebServerOpenAPI_v2(void);
 
-	bool gHandleRequest(const std::string method, const std::string uri, std::multimap<std::string, std::string> parameters, Json::Value& root);
+	bool gHandleRequest(const std::string method, const std::string uri, std::multimap<std::string, std::string> parameters, const int8_t userrights);
 	http::server::reply::status_type gGetResultCode();
+	Json::Value gGetResultJSON();
 private:
 	void gInit();
 	bool gParseURI(const std::string uri);
@@ -29,7 +30,7 @@ private:
 	bool gHandleCommand(const std::string& command, const Json::Value& input, Json::Value& result);
 
 	std::map < std::string, openapi_command_function > m_openapicommands;
-	std::map < std::string, uint8_t > m_openapicommandrights;
+	std::map < std::string, int8_t > m_openapicommandrights;
 
 	http::server::reply m_httpresult;
 	std::string m_uri;
@@ -39,6 +40,7 @@ private:
 	std::string m_altparams;
 	std::string m_altcommand;
 	Json::Value m_resultjson;
+	int8_t m_userrights;
 
 	// List of OpenAPI supported commands
 	// Make sure they also get registered in the class constructor! 
@@ -48,4 +50,5 @@ private:
 
 	/* Services */
 	void GetServicesStatus(const Json::Value& input, Json::Value& result);
+	void GetServicesVersion(const Json::Value& input, Json::Value& result);
 };

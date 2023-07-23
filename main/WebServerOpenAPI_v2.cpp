@@ -20,9 +20,21 @@ License: Public domain
 #include <sstream>
 //#include <iomanip>
 
-using namespace boost::placeholders;
+//using namespace boost::placeholders;
 
 #define TESTDEFINE "testing123"
+
+extern std::string szStartupFolder;
+extern std::string szUserDataFolder;
+extern std::string szWWWFolder;
+
+extern std::string szAppVersion;
+extern int iAppRevision;
+extern std::string szAppHash;
+extern std::string szAppDate;
+extern std::string szPyVersion;
+
+extern bool g_bUseUpdater;
 
 CWebServerOpenAPI_v2::CWebServerOpenAPI_v2()
 {
@@ -35,6 +47,7 @@ CWebServerOpenAPI_v2::CWebServerOpenAPI_v2()
 	gRegisterCommand("GETdevice", [this](auto&& input, auto&& result) { GetDevice(input, result); }, http::server::URIGHTS_VIEWER);
 	/* Services */
 	gRegisterCommand("GETservicesstatus", [this](auto&& input, auto&& result) { GetServicesStatus(input, result); }, http::server::URIGHTS_NONE);
+	gRegisterCommand("GETservicesversion", [this](auto&& input, auto&& result) { GetServicesVersion(input, result); }, http::server::URIGHTS_NONE);
 }
 
 CWebServerOpenAPI_v2::~CWebServerOpenAPI_v2()
@@ -45,18 +58,22 @@ CWebServerOpenAPI_v2::~CWebServerOpenAPI_v2()
  * The generic (helper) functions to handle incoming requests
  **********************/
 
-bool CWebServerOpenAPI_v2::gHandleRequest(const std::string method, const std::string uri, std::multimap<std::string, std::string> parameters, Json::Value& root)
+bool CWebServerOpenAPI_v2::gHandleRequest(const std::string method, const std::string uri, std::multimap<std::string, std::string> parameters, const int8_t userrights)
 {
 	Json::Value result;
 	Json::Value input;
 	bool bAltExec = false;
 
-	_log.Debug(DEBUG_WEBSERVER, "WebServerOpenAPI: Handling request (%s) %s", method.c_str(), uri.c_str());
+	_log.Debug(DEBUG_WEBSERVER, "WebServerOpenAPI: Handling request (%s) %s (rights %d)", method.c_str(), uri.c_str(), userrights);
 
 	gInit();
 
 	if (!gParseURI(uri))
 		return false;
+
+	m_userrights = userrights;
+	if (userrights < 0)
+		m_userrights = (int8_t)http::server::URIGHTS_NONE;
 
 	// Add method to command
 	m_command = method + m_command;
@@ -94,16 +111,8 @@ bool CWebServerOpenAPI_v2::gHandleRequest(const std::string method, const std::s
 
 	if (!result.empty())
 	{
-		/*
-		root["command"] = m_command;
-		if (bAltExec)
-			root["command"] = m_altcommand;
-		root["result"] = result;
-		*/
-		root = result;
+		m_resultjson = result;
 	}
-
-	m_resultjson = root;
 
 	return true;
 }
@@ -111,6 +120,11 @@ bool CWebServerOpenAPI_v2::gHandleRequest(const std::string method, const std::s
 http::server::reply::status_type CWebServerOpenAPI_v2::gGetResultCode()
 {
 	return m_httpresult.status;
+}
+
+Json::Value CWebServerOpenAPI_v2::gGetResultJSON()
+{
+	return m_resultjson;
 }
 
 void CWebServerOpenAPI_v2::gInit()
@@ -123,6 +137,7 @@ void CWebServerOpenAPI_v2::gInit()
 	m_altparams = "";
 	m_altcommand = "";
 	m_resultjson.clear();
+	m_userrights = http::server::URIGHTS_NONE;
 }
 
 bool CWebServerOpenAPI_v2::gParseURI(const std::string uri)
@@ -176,7 +191,7 @@ bool CWebServerOpenAPI_v2::gParseURI(const std::string uri)
 void CWebServerOpenAPI_v2::gRegisterCommand(const char* command, openapi_command_function CommandFunction, const uint8_t rights)
 {
 	m_openapicommands.insert(std::pair<std::string, openapi_command_function >(std::string(command), CommandFunction));
-	m_openapicommandrights.insert(std::pair<std::string, uint8_t >(std::string(command), rights));
+	m_openapicommandrights.insert(std::pair<std::string, int8_t >(std::string(command), (int8_t)rights));
 }
 
 bool CWebServerOpenAPI_v2::gFindCommand(const std::string& command)
@@ -187,11 +202,26 @@ bool CWebServerOpenAPI_v2::gFindCommand(const std::string& command)
 
 bool CWebServerOpenAPI_v2::gHandleCommand(const std::string& command, const Json::Value& input, Json::Value& result)
 {
-	std::map < std::string, openapi_command_function >::iterator pf = m_openapicommands.find(command);
-	if (pf != m_openapicommands.end())
+	if (gFindCommand(command))
 	{
-		pf->second(input, result);
-		return true;
+		std::map < std::string, int8_t >::iterator pr = m_openapicommandrights.find(command);
+		if (pr != m_openapicommandrights.end())
+		{
+			if (m_userrights >= pr->second)
+			{
+				std::map < std::string, openapi_command_function >::iterator pf = m_openapicommands.find(command);
+				m_httpresult.status = http::server::reply::ok;
+				pf->second(input, result);
+				if (m_httpresult.status == http::server::reply::ok && result.empty())
+					m_httpresult.status = http::server::reply::no_content;
+			}
+			else
+			{
+				_log.Debug(DEBUG_AUTH ,"WebServerOpenAPI: Command %s requires rights %d, but user has only rights %d", command.c_str(), pr->second, m_userrights);
+				m_httpresult.status = http::server::reply::forbidden;
+			}
+			return true;
+		}
 	}
 	return false;
 }
