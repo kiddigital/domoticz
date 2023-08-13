@@ -1,0 +1,261 @@
+openapi: 3.0.0
+info:
+  title: Domoticz API webservice Version 2
+  description: |
+    This is the OpenAPI (3.0.0) specification for Domoticz
+    
+    The Domoticz webservice is a RESTfull API which can be comsumed by many different clients
+    and different kinds of clients (webapps, websites, proxies, mobile apps, etc.).
+
+    History:
+
+    - This 0.0.1 version is just a Proof of Concept
+
+    Note: the reason that this is called V2 (Version 2) is that the original webserver
+    implementation is considered V1. So all calls made to the webserver that do not have
+    v2 (or maybe higher in the future) can be seen as the 'old' (=current) way.
+  version: 0.0.1
+  contact:
+    name: Use the forum for all question
+    url: https://www.domoticz.com/forum/
+  license:
+      name: GPL-3.0 
+      url: https://github.com/domoticz/domoticz/blob/development/License.txt
+externalDocs:
+    description: See our Wiki for more details and documentation
+    url: https://www.domoticz.com/wiki/
+servers:
+  - url: http://localhost:8080/api/v2
+    description: Probably your 'development' Domoticz server
+  - url: http://localhost:4010/
+    description: Hopefully your Prism Mock server
+paths:
+  /device/{idx}:
+    get:
+      summary: Returns the device information for a given Domoticz device IDX
+      description: |
+        This method returns the detail information from a specific Domoticz device
+        if the device exists
+
+        The device details contain all relevant detail items that Domoticz has. Even
+        'hidden' devices (devices from inactive hardware) are returned
+      tags:
+        - Devices
+      parameters:
+        - in: path
+          name: idx
+          schema:
+            type: integer
+          required: true
+          description: Numeric Domoticz Device IDx of the device
+      responses:
+        '200':
+          description: An object containing all Device details
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Device' 
+        '404':
+          description: If a given device IDX does not exists
+    post:
+      summary: Updates the device information for a given Domoticz device IDX
+      description: |
+        This method updates the detail information from a specific Domoticz device
+        if the device exists
+      tags:
+        - Devices
+      parameters:
+        - in: path
+          name: idx
+          schema:
+            type: integer
+          required: true
+          description: Numeric Domoticz Device IDx of the device
+      responses:
+        '204':
+          description: An empty response meaning the update went OK
+        '400':
+          description: When the input is not as expected
+        '404':
+          description: If a given device IDX does not exists
+    delete:
+      summary: Deletes the devices as specified by the given Domoticz device IDX
+      description: |
+        This method deletes the given Domoticz device
+        if the device exists
+      tags:
+        - Devices
+      parameters:
+        - in: path
+          name: idx
+          schema:
+            type: integer
+          required: true
+          description: Numeric Domoticz Device IDx of the device
+      responses:
+        '204':
+          description: An empty response meaning the update went OK
+        '400':
+          description: When the input is not as expected
+        '403':
+          description: |
+            Request failed, This is the response received when a request is made
+            with valid API credentials towards an API endpoint or resource you
+            do not have access to.
+          content: 
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: If a given device IDX does not exists
+  /weatherforecastdata:
+    get:
+      summary: Returns the information used by Domoticz Forecast screen
+      description: |
+        Some description
+      tags:
+        - Weather
+      responses:
+        '200':
+          description: All relevant forecastdata
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  example: "OpenWeatherMap"
+  /services/status:
+    get:
+      summary: Gives an overview of the status of Domoticz
+      description: |
+        More explanation on this call .. tbd
+      tags:
+        - Services
+      parameters:
+        - in: query
+          name: verbose
+          schema:
+            type: string
+          required: false
+          description: Verbosity level
+      responses:
+        '200':
+          description: Everything ok and the details requested by the verbosity level
+          content:
+            application/json:
+              schema:
+                properties:
+                  Status:
+                    type: string
+                    maxLength: 50
+                    description: |
+                      Human readable text explaining the current OK status of the application
+                      This explanation is only available when the 'verbose' flag has been specified
+                      Otherwise an empty (204) response is returned.
+                    example: "All parts of the application are looking good!"
+        '204':
+          description: |
+            No Content, just stating everything is ok. 
+            This respons is here for use by automated monitoring systems that just check the result code
+            and do nothing with a response if one is available in case everything is OK.
+        '500':
+          description: |
+            Something unexpected went wrong, so unable to give a real answer to the request.
+            This means that the health check itself has failed so we do not have a definitive answer.
+            Wise to consider this also an indication that something is wrong and a restart or similar might be needed.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '503':
+          description: |
+            Everything is not ok :(
+            The application did some self checking and found something not behaving as expected.
+            This is the responsecode the application will provide after succesfully completing the self-healtcheck
+            and finding something that is not as it should be.
+            Probably a good idea to restart the application and see if the problem has been resolved.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+components:
+  schemas:
+    Device:
+      properties:
+        DeviceID:
+          type: string
+          maxLength: 25
+          example: "83011"
+        HardwareID:
+          type: integer
+          format: int32
+          example: 7
+        ID:
+          type: integer
+          format: int32
+          example: 1011
+        LastUpdate:
+          type: string
+          format: date-time
+          example: "2020-10-25T20:52:21+00"
+        Name:
+          type: string
+          maxLength: 100
+          example: "dummy-temp-hum"
+        SubType:
+          type: integer
+          example: 1
+        Type:
+          type: integer
+          example: 82
+        Unit:
+          type: integer
+          example: 1
+        nValue:
+          type: integer
+          example: 0
+        sValue: 
+          type: string
+          maxLength: 200
+          example: "10.30;66;123"
+    Problem:
+      type: object
+      properties:
+        type:
+          type: string
+          format: uri
+          description: |
+            An absolute URI that identifies the problem type.  When dereferenced,
+            it SHOULD provide human-readable documentation for the problem type
+            (e.g., using HTML).
+          default: 'about:blank'
+          example: 'https://zalando.github.io/problem/constraint-violation'
+        title:
+          type: string
+          description: |
+            A short, summary of the problem type. Written in english and readable
+            for engineers (usually not suited for non technical stakeholders and
+            not localized); example: Service Unavailable
+        status:
+          type: integer
+          format: int32
+          description: |
+            The HTTP status code generated by the origin server for this occurrence
+            of the problem.
+          minimum: 100
+          maximum: 600
+          exclusiveMaximum: true
+          example: 503
+        detail:
+          type: string
+          description: |
+            A human readable explanation specific to this occurrence of the
+            problem.
+          example: Connection to database timed out
+        instance:
+          type: string
+          format: uri
+          description: |
+            An absolute URI that identifies the specific occurrence of the problem.
+            It may or may not yield further information if dereferenced.
