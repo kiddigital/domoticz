@@ -175,6 +175,8 @@ main/WebServerCmds.cpp
 main/WebServerCommands.cpp
 main/WebServerHandleGraph.cpp
 main/WebServerHelper.cpp
+main/WebServerOpenAPI_v2.cpp
+main/WebServerOpenAPI_v2_Devices.cpp
 main/WindCalculation.cpp
 iamserver/IamService.cpp
 push/BasePush.cpp
