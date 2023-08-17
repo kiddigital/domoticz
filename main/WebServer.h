@@ -4,6 +4,8 @@
 #include <libwebem/cWebem.h>
 #include <libwebem/request.h>
 #include <libwebem/session_store.h>
+#include "WebServerOpenAPI_v2.h"
+//#include "WebServerOpenAPI_v3.h"
 #include "../iamserver/iam_settings.hpp"
 
 struct lua_State;
@@ -71,7 +73,12 @@ class CWebServer : public session_store, public std::enable_shared_from_this<CWe
 	void RestoreDatabase(WebEmSession & session, const request& req, std::string & redirect_uri);
 	void SBFSpotImportOldData(WebEmSession & session, const request& req, std::string & redirect_uri);
 
+	// OpenAPI specified startingpoint
+	void GetApiPage(WebEmSession & session, const request& req, reply & rep);
+
 	cWebem *m_pWebEm;
+	CWebServerOpenAPI_v2 *m_pWebOpenAPI_v2;
+	//CWebServerOpenAPI_v3 *m_pWebOpenAPI_v3;
 
 	void ReloadCustomSwitchIcons();
 
