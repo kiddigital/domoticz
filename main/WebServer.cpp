@@ -6,6 +6,8 @@
 #include <algorithm>
 #include "WebServer.h"
 #include "WebServerHelper.h"
+#include "WebServerOpenAPI_v2.h"
+//#include "WebServerOpenAPI_v3.h"
 #include "mainworker.h"
 #include "Helper.h"
 #include "EventSystem.h"
@@ -185,6 +187,16 @@ namespace http
 				}
 			} while (exception);
 
+			try
+			{
+				m_pWebOpenAPI_v2 = new CWebServerOpenAPI_v2();
+				//m_pWebOpenAPI_v3 = new CWebServerOpenAPI_v3();
+			}
+			catch (std::exception& e)
+			{
+				_log.Log(LOG_ERROR, "WebServer(%s) failed to load OpenAPI_v2 support! (%s)", m_server_alias.c_str(), e.what());
+			}
+
 			_log.Log(LOG_STATUS, "WebServer(%s) started on address: %s with port %s", m_server_alias.c_str(), settings.listening_address.c_str(), settings.listening_port.c_str());
 
 			m_pWebEm->SetDigistRealm(sRealm);
@@ -223,6 +235,9 @@ namespace http
 				m_pWebEm->RegisterPageCode(
 					m_iamsettings.discovery_url.c_str(), [this](auto&& session, auto&& req, auto&& rep) { GetOpenIDConfiguration(session, req, rep); }, true);
 			}
+
+			// WebServer call that handles the part under the Domoticz OpenAPI spec
+			m_pWebEm->RegisterPageCode("/api", [this](auto &&session, auto &&req, auto &&rep) { GetApiPage(session, req, rep); }, true);
 
 			m_pWebEm->RegisterPageCode("/json.htm", [this](auto&& session, auto&& req, auto&& rep) { GetJSonPage(session, req, rep); });
 			// These 'Pages' should probably be 'moved' to become Command codes handled by the 'json.htm API', so we get all API calls through one entry point
@@ -644,6 +659,10 @@ namespace http
 				}
 				delete m_pWebEm;
 				m_pWebEm = nullptr;
+				delete m_pWebOpenAPI_v2;
+				m_pWebOpenAPI_v2 = nullptr;
+				//delete m_pWebOpenAPI_v3;
+				//m_pWebOpenAPI_v3 = nullptr;
 			}
 			catch (...)
 			{
@@ -4201,6 +4220,88 @@ namespace http
 			reply::set_content(&rep, root.toStyledString());
 			rep.status = static_cast<http::server::reply::status_type>(session.reply_status);
 		}
+
+		// Start OpenAPI specific code (API v2, v3)
+		void CWebServer::GetApiPage(WebEmSession &session, const request &req, reply &rep)
+		{
+			Json::Value root;
+
+			_log.Debug(DEBUG_WEBSERVER,"Handling /API for (%s) %s (with rights %d)", req.method.c_str(), req.uri.c_str(), session.rights);
+
+			// Check version, handle v2
+			if (req.uri.find("/api/v2/") == 0)
+			{
+				if (m_pWebOpenAPI_v2 != NULL)
+				{
+					try
+					{
+						if(m_pWebOpenAPI_v2->gHandleRequest(req.method, req.uri, req.parameters, (int8_t)session.rights))
+						{
+							rep.status = m_pWebOpenAPI_v2->gGetResultCode();
+							root = m_pWebOpenAPI_v2->gGetResultJSON();
+						}
+						else
+						{
+							rep.status = reply::not_found;
+							return;
+						}
+					}
+					catch(const std::exception& e)
+					{
+						_log.Debug(DEBUG_WEBSERVER, "WebServerOpenAPI_v2 crashed: %s", e.what());
+						rep.status = reply::internal_server_error;
+						return;
+					}
+				}
+				else
+				{
+					rep.status = reply::service_unavailable;
+					return;
+				}
+			}
+
+			/* // Here we could handle v3 once it is there, etc.
+			else if (req.uri.find("/api/v3/") == 0)
+			{
+				if (m_pWebOpenAPI_v3 != NULL)
+				{
+					try
+					{
+						if(!m_pWebOpenAPI_v3->HandleRequest(req.method, req.uri, req.parameters, root))
+						{
+							rep.status = reply::not_found;
+							return;
+						}
+					}
+					catch(const std::exception& e)
+					{
+						_log.Debug(DEBUG_WEBSERVER, "WebServerOpenAPI_v3 crashed: %s", e.what());
+						rep.status = reply::internal_server_error;
+						return;
+					}
+				}
+				else
+				{
+					rep.status = reply::service_unavailable;
+					return;
+				}
+			}
+			*/ // The above would be useable with a v3 version
+
+			else	// So we have an unknown/unhandled version, return 404
+			{
+				rep.status = reply::not_found;
+				return;
+			}
+
+			// Return the content from the API call (if any)
+			if (!root.empty())
+			{
+				reply::set_content(&rep, root.toStyledString());
+			}
+		}
+
+		// End OpenAPI Specific
 
 		void CWebServer::UploadFloorplanImage(WebEmSession& session, const request& req, std::string& redirect_uri)
 		{

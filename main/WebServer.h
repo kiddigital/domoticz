@@ -1,6 +1,8 @@
 #pragma once
 
 #include <string>
+#include "WebServerOpenAPI_v2.h"
+//#include "WebServerOpenAPI_v3.h"
 #include "../webserver/cWebem.h"
 #include "../webserver/request.hpp"
 #include "../webserver/session_store.hpp"
@@ -60,7 +62,12 @@ class CWebServer : public session_store, public std::enable_shared_from_this<CWe
 	void RestoreDatabase(WebEmSession & session, const request& req, std::string & redirect_uri);
 	void SBFSpotImportOldData(WebEmSession & session, const request& req, std::string & redirect_uri);
 
+	// OpenAPI specified startingpoint
+	void GetApiPage(WebEmSession & session, const request& req, reply & rep);
+
 	cWebem *m_pWebEm;
+	CWebServerOpenAPI_v2 *m_pWebOpenAPI_v2;
+	//CWebServerOpenAPI_v3 *m_pWebOpenAPI_v3;
 
 	void ReloadCustomSwitchIcons();
 
