@@ -197,6 +197,8 @@ main/WebServerHandleGraphMonthYear.cpp
 main/WebServerHandleGraphUtils.cpp
 main/WebServerHandleGraphWeek.cpp
 main/WebServerHelper.cpp
+main/WebServerOpenAPI_v2.cpp
+main/WebServerOpenAPI_v2_Devices.cpp
 main/WindCalculation.cpp
 mdns/mdns.cpp
 iamserver/IamService.cpp
