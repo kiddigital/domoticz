@@ -486,6 +486,10 @@ namespace http {
 			{
 				extension = "json";
 			}
+			else if (request_path == "/api")	// All OpenAPI specified methods are expected to return JSON
+			{
+				extension = "json";
+			}
 			else
 			{
 				std::size_t last_slash_pos = request_path.find_last_of('/');
@@ -508,10 +512,12 @@ namespace http {
 				catch (std::exception& e)
 				{
 					_log.Log(LOG_ERROR, "[web:%s] PO exception occurred : '%s'", GetPort().c_str(), e.what());
+					rep.status = reply::internal_server_error;
 				}
 				catch (...)
 				{
 					_log.Log(LOG_ERROR, "[web:%s] PO unknown exception occurred", GetPort().c_str());
+					rep.status = reply::internal_server_error;
 				}
 				std::string attachment;
 				for (const auto &header : rep.headers)
@@ -598,6 +604,12 @@ namespace http {
 				{
 					request_path = "";
 				}
+			}
+
+			// Start of OpenAPI specified URI's
+			if (request_path.find("/api/") == 0)
+			{
+				request_path = "/api";
 			}
 
 			return request_path;
