@@ -1195,12 +1195,15 @@ bool MainWorker::Start()
 	}
 
 	mdns_cpp::Logger::setLoggerSink([](const std::string& log_msg) {
-		_log.Debug(DEBUG_NORM, "mDNS: %s", log_msg.c_str());
+		_log.Debug(DEBUG_WEBSERVER, "mDNS: %s", log_msg.c_str());
 	});
 
-	mdns_cpp::mDNS mdns;
-	mdns.setServiceHostname("airforce1");
-	mdns.startService();
+	mdns_cpp::mDNS m_mdns;
+
+	m_mdns.setServiceHostname("airforce1");
+	m_mdns.setServicePort(8080);
+	m_mdns.setServiceName("_http._tcp.local");
+	m_mdns.startService();
 
 	HandleHourPrice();
 
@@ -1242,6 +1245,7 @@ bool MainWorker::Stop()
 #ifdef ENABLE_PYTHON
 		m_pluginsystem.StopPluginSystem();
 #endif
+		//m_mdns.stopService();
 
 		//    m_cameras.StopCameraGrabber();
 
