@@ -123,6 +123,9 @@ namespace http {
 			/// If this is a keep-alive connection or not
 			bool keepalive_;
 
+			/// If this is a text/event-stream (SSE) connection or not
+			bool eventstream_;
+
 			/// Read timeout in seconds
 			int read_timeout_;
 
@@ -177,7 +180,8 @@ namespace http {
 			enum class ConnectionType {
 				connection_http,
 				connection_websocket,
-				connection_websocket_closing
+				connection_websocket_closing,
+				connection_ssesocket
 			};
 			ConnectionType connection_type;
 		};

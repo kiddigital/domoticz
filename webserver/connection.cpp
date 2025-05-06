@@ -368,7 +368,7 @@ namespace http {
 				const char* begin;
 				// websocket variables
 				size_t bytes_consumed;
-
+_log.Debug(DEBUG_RECEIVED, "connection::handle_read %d bytes (%d)", bytes_transferred, connection_type);
 				switch (connection_type)
 				{
 				case ConnectionType::connection_http:
@@ -409,6 +409,8 @@ namespace http {
 						reply_.reset();
 						const char* pConnection = request_.get_req_header(&request_, "Connection");
 						keepalive_ = pConnection != nullptr && boost::iequals(pConnection, "Keep-Alive");
+						pConnection = request_.get_req_header(&request_, "Accept");
+						eventstream_ = pConnection != nullptr && boost::iequals(pConnection, "text/event-stream");
 						request_.keep_alive = keepalive_;
 						request_.host_remote_address = host_remote_endpoint_address_;
 						request_.host_local_address = host_local_endpoint_address_;
@@ -483,6 +485,11 @@ namespace http {
 									return;
 							}
 						}
+						else if (eventstream_ && reply_.status == reply::ok) {
+							// an event stream was requested
+							// we are a persistant connection
+							keepalive_ = true;
+						}
 
 						if (request_.keep_alive && ((reply_.status == reply::ok) || (reply_.status == reply::no_content) || (reply_.status == reply::not_modified))) {
 							// Allows request handler to override the header (but it should not)
@@ -496,6 +503,10 @@ namespace http {
 						if (reply_.status == reply::switching_protocols) {
 							// this was an upgrade request, set this value after MyWrite to allow the 101 response to go out
 							connection_type = ConnectionType::connection_websocket;
+						}
+						else if (eventstream_ && reply_.status == reply::ok) {
+							connection_type = ConnectionType::connection_ssesocket;
+							_log.Debug(DEBUG_WEBSERVER, "connection::handle_read: event stream requested");
 						}
 
 						if (keepalive_) {
@@ -522,6 +533,7 @@ namespace http {
 				case ConnectionType::connection_websocket_closing:
 					begin = static_cast<const char*>(_buf.data().data());
 					result = websocket_parser.parse((const unsigned char*)begin, _buf.size(), bytes_consumed, keepalive_);
+_log.Debug(DEBUG_RECEIVED, "connection::handle_read websocket: parsing more websocket data (%ld bytes) .%s.", _buf.size(), begin);
 					_buf.consume(bytes_consumed);
 					if (result) {
 						// we received a complete packet (that was handled already)
@@ -537,6 +549,15 @@ namespace http {
 					else // if (!result)
 					{
 						read_more();
+					}
+					break;
+				case ConnectionType::connection_ssesocket:
+					// we are in a SSE connection
+					_log.Debug(DEBUG_WEBSERVER, "connection::handle_read: parsing more event stream data");
+					begin = static_cast<const char*>(_buf.data().data());
+					if (_buf.size() > 0)
+					{
+						_log.Debug(DEBUG_WEBSERVER, "connection::handle_read: got data (%ld bytes) .%s.", _buf.size(), begin);
 					}
 					break;
 				}
@@ -623,9 +644,15 @@ namespace http {
 
 		/// stop connection on read timeout
 		void connection::handle_read_timeout(const boost::system::error_code& error) {
+_log.Debug(DEBUG_RECEIVED, "connection::handle_read_timeout %s (%d/%d/%s)", host_remote_endpoint_address_.c_str(), connection_type, keepalive_, error.message().c_str());
 			if (!error && keepalive_ && (connection_type == ConnectionType::connection_websocket)) {
 				// For WebSockets that requested keep-alive, use a Server side Ping
 				websocket_parser.SendPing();
+			}
+			else if (!error && keepalive_ && (connection_type == ConnectionType::connection_ssesocket)) {
+				// For SSE keep-alive, we just reset the timer
+				reset_read_timeout();
+				_log.Debug(DEBUG_RECEIVED, "connection::handle_read_timeout_ssesocket reset timeout");
 			}
 			else if (!error)
 			{
