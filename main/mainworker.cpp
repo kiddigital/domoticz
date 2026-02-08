@@ -116,6 +116,7 @@
 #include "../hardware/PanasonicTV.h"
 #include "../hardware/OpenWebNetTCP.h"
 #include "../hardware/AtagOne.h"
+#include "../hardware/AtagOneLocal.h"
 #include "../hardware/Sterbox.h"
 #include "../hardware/RAVEn.h"
 #include "../hardware/DenkoviDevices.h"
@@ -937,6 +938,9 @@ bool MainWorker::AddHardwareFromParams(
 		break;
 	case HTYPE_AtagOne:
 		pHardware = new CAtagOne(ID, Username, Password, Mode1, Mode2, Mode3, Mode4, Mode5, Mode6);
+		break;
+	case HTYPE_AtagOneLocal:
+		pHardware = new CAtagOneLocal(ID, Mode1, Mode2, Mode3, Mode4, Mode5, Mode6);
 		break;
 	case HTYPE_NEST:
 		pHardware = new CNest(ID, Username, Password);
@@ -13477,6 +13481,7 @@ bool MainWorker::SetSetPointInt(const std::vector<std::string>& sd, const float 
 		|| (pHardware->HwdType == HTYPE_ICYTHERMOSTAT)
 		|| (pHardware->HwdType == HTYPE_TOONTHERMOSTAT)
 		|| (pHardware->HwdType == HTYPE_AtagOne)
+		|| (pHardware->HwdType == HTYPE_AtagOneLocal)
 		|| (pHardware->HwdType == HTYPE_NEST)
 		|| (pHardware->HwdType == HTYPE_Nest_OAuthAPI)
 		|| (pHardware->HwdType == HTYPE_ANNATHERMOSTAT)
@@ -13518,6 +13523,11 @@ bool MainWorker::SetSetPointInt(const std::vector<std::string>& sd, const float 
 		else if (pHardware->HwdType == HTYPE_AtagOne)
 		{
 			CAtagOne* pGateway = dynamic_cast<CAtagOne*>(pHardware);
+			pGateway->SetSetpoint(ID4, TempValue);
+		}
+		else if (pHardware->HwdType == HTYPE_AtagOneLocal)
+		{
+			CAtagOneLocal* pGateway = dynamic_cast<CAtagOneLocal*>(pHardware);
 			pGateway->SetSetpoint(ID4, TempValue);
 		}
 		else if (pHardware->HwdType == HTYPE_NEST)
@@ -13691,6 +13701,12 @@ bool MainWorker::SetThermostatState(const std::string& idx, const int newState)
 	if (pHardware->HwdType == HTYPE_AtagOne)
 	{
 		//CAtagOne *pGateway = dynamic_cast<CAtagOne*>(pHardware);
+		//pGateway->SetProgramState(newState);
+		return true;
+	}
+	if (pHardware->HwdType == HTYPE_AtagOneLocal)
+	{
+		//CAtagOneLocal *pGateway = dynamic_cast<CAtagOneLocal*>(pHardware);
 		//pGateway->SetProgramState(newState);
 		return true;
 	}

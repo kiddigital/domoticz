@@ -1864,6 +1864,12 @@
     <ClInclude Include="..\hardware\AtagOne.h">
       <Filter>Devices\AtagOne</Filter>
     </ClInclude>
+    <ClInclude Include="..\hardware\AtagOneLocal.h">
+      <Filter>Devices\AtagOneLocal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\webserver\fastcgi.hpp">
+      <Filter>Webserver</Filter>
+    </ClInclude>
     <ClInclude Include="..\hardware\Sterbox.h">
       <Filter>Devices\Sterbox</Filter>
     </ClInclude>
@@ -2693,6 +2699,12 @@
     </ClCompile>
     <ClCompile Include="..\hardware\AtagOne.cpp">
       <Filter>Devices\AtagOne</Filter>
+    </ClCompile>
+    <ClCompile Include="..\hardware\AtagOneLocal.cpp">
+      <Filter>Devices\AtagOneLocal</Filter>
+    </ClCompile>
+    <ClCompile Include="..\webserver\fastcgi.cpp">
+      <Filter>Webserver</Filter>
     </ClCompile>
     <ClCompile Include="..\hardware\Sterbox.cpp">
       <Filter>Devices\Sterbox</Filter>

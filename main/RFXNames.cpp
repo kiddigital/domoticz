@@ -228,6 +228,7 @@ static const STR_TABLE_SINGLE HardwareTypeTable[] = {
 	{ HTYPE_NefitEastLAN, "Nefit Easy HTTP server over LAN interface", "Nefit" },
 	{ HTYPE_OpenWebNetTCP, "MyHome OpenWebNet with LAN interface", "MyHome" },
 	{ HTYPE_RaspberryHTU21D, "I2C sensor HTU21D(F)/SI702x Temp+Humidity", "I2C HTU21D" },
+	{ HTYPE_AtagOneLocal, "Atag One Thermostat (Local)", "Atag (Local)" },
 	{ HTYPE_AtagOne, "Atag One Thermostat", "Atag" },
 	{ HTYPE_Sterbox, "Sterbox v2-3 PLC with LAN interface", "Sterbox" },
 	{ HTYPE_HTTPPOLLER, "HTTP/HTTPS poller", "HTTP(S) Poller" },

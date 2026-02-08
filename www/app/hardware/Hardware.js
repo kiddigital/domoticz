@@ -1360,7 +1360,7 @@ define(['app'], function (app) {
 			}
 			else if (
 				(text.indexOf("ICY") >= 0) ||
-				(text.indexOf("Atag") >= 0) ||
+				(text.indexOf("Atag") >= 0 && text.indexOf("Local") === -1) ||
 				(text.indexOf("Nest Th") >= 0 && text.indexOf("OAuth") === -1) ||
 				(text.indexOf("PVOutput") >= 0)
 			) {
@@ -3069,7 +3069,7 @@ define(['app'], function (app) {
 			}
 			else if (
 				(text.indexOf("ICY") >= 0) ||
-				(text.indexOf("Atag") >= 0) ||
+				(text.indexOf("Atag") >= 0 && text.indexOf("Local") === -1) ||
 				(text.indexOf("Nest Th") >= 0 && text.indexOf("OAuth") === -1) ||
 				(text.indexOf("PVOutput") >= 0) ||
 				(text.indexOf("HTTP") >= 0)
@@ -4905,7 +4905,7 @@ define(['app'], function (app) {
 							(data["Type"].indexOf("ICY") >= 0) ||
 							(data["Type"].indexOf("Eco Devices") >= 0) ||
 							(data["Type"].indexOf("Toon") >= 0) ||
-							(data["Type"].indexOf("Atag") >= 0) ||
+							(data["Type"].indexOf("Atag") >= 0 && data["Type"].indexOf("Local") === -1) ||
 							(data["Type"].indexOf("Nest Th") >= 0 && data["Type"].indexOf("OAuth") === -1) ||
 							(data["Type"].indexOf("PVOutput") >= 0) ||
 							(data["Type"].indexOf("ETH8020") >= 0) ||
@@ -5613,7 +5613,7 @@ define(['app'], function (app) {
 			}
 			else if (
 				(text.indexOf("ICY") >= 0) ||
-				(text.indexOf("Atag") >= 0) ||
+				(text.indexOf("Atag") >= 0 && text.indexOf("Local") === -1) ||
 				(text.indexOf("Nest Th") >= 0 && text.indexOf("OAuth") === -1) ||
 				(text.indexOf("PVOutput") >= 0)
 			) {

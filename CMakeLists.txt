@@ -227,6 +227,7 @@ hardware/ASyncSerial.cpp
 hardware/ASyncTCP.cpp
 hardware/ASyncWebsocket.cpp
 hardware/AtagOne.cpp
+hardware/AtagOneLocal.cpp
 hardware/BleBox.cpp
 hardware/Buienradar.cpp
 hardware/cayenne_lpp/CayenneLPP_Dec.cpp
