@@ -166,19 +166,6 @@ bool CAtagOneLocal::GetDeviceDetails()
     sURL = "http://" + m_IPaddress + ":10000/retrieve";
     
     // Prepare the POST body - request all available data points
-	/*
-    Json::Value jPostData;
-	jPostData["retrieve_message"] = Json::objectValue;
-	jPostData["retrieve_message"]["seqnr"] = ++m_seqNr;
-	jPostData["retrieve_message"]["device_id"] = m_DeviceID;
-	jPostData["retrieve_message"]["info"] = 29;		// requesting bitmask (Control (1), Configuration (4), Report (8), Status (16))
-    
-	Json::StreamWriterBuilder builder;
-	builder["indentation"] = "";     // no pretty-print whitespace
-	builder["emitUTF8"] = true;       // optional, keeps UTF-8
-
-	const std::string sPostData = Json::writeString(builder, jPostData);
-	*/
 	const std::string sPostData = 
 	"{\"retrieve_message\": {"
     "\"seqnr\": " + std::to_string(m_seqNr) + ","
@@ -186,7 +173,7 @@ bool CAtagOneLocal::GetDeviceDetails()
       "\"user_account\": \"\","
       "\"mac_address\": \"" + m_MacAddress + "\""
     "},"
-    "\"info\": 29,"
+    "\"info\": 93,"
 	"}}";
 
 	Debug(DEBUG_HARDWARE, "POST data to thermostat: %s", sPostData.c_str());
@@ -237,173 +224,100 @@ bool CAtagOneLocal::GetDeviceDetails()
 	}
 	m_seqNr++; // Increment expected sequence number for next request
 
-    if (retrieveData.isMember("report") && retrieveData["report"].isObject())
+    if (!(retrieveData.isMember("report") && retrieveData["report"].isObject()))
     {
-        Debug(DEBUG_HARDWARE, "Report data received (%s)", retrieveData["report"].toStyledString().c_str());
+        Debug(DEBUG_HARDWARE, "Report data missing!");
+		return false;
     }
 
-    if (retrieveData.isMember("control") && retrieveData["control"].isObject())
+	if (!(retrieveData["report"].isMember("details") && retrieveData["report"]["details"].isObject()))
     {
-        Debug(DEBUG_HARDWARE, "Control data received (%s)", retrieveData["control"].toStyledString().c_str());
+        Debug(DEBUG_HARDWARE, "Report details data missing!");
+		return false;
     }
 
-    if (retrieveData.isMember("configuration") && retrieveData["configuration"].isObject())
-    {
-        Debug(DEBUG_HARDWARE, "Configuration data received (%s)", retrieveData["configuration"].toStyledString().c_str());
+    if (!(retrieveData.isMember("control") && retrieveData["control"].isObject()))
+	{
+		Debug(DEBUG_HARDWARE, "Control data missing!");
+		return false;
     }
 
-    // Store the complete root object for use by caller
-    // The caller can access individual values like:
-    // - retrieveData["report"]["room_temp"] (current temperature)
-    // - retrieveData["control"]["ch_mode"] (central heating mode)
-    // - retrieveData["control"]["temp_set"] (setpoint temperature)
-    // etc.
+    if (!(retrieveData.isMember("configuration") && retrieveData["configuration"].isObject()))
+    {
+        Debug(DEBUG_HARDWARE, "Configuration data missing!");
+		return false;
+    }
 
-    return true;
+    return ProcessDeviceDetails(retrieveData);
 }
 
-/*
-bool CAtagOneLocal::GetDeviceDetails(const std::string& IPaddress)
+bool CAtagOneLocal::ProcessDeviceDetails(const Json::Value &retrievedData)
 {
-	std::string sResult;
-
-	std::string sURL;
-	std::vector<std::string> ExtraHeaders;
-	std::vector<std::string> ResponseHeaders;
-
-	Json::Value root;
-
-
-	sURL = ATAGONE_URL_DIAGNOSTICS;
-	stdreplace(sURL, "{0}", CURLEncode::URLEncode(ThermostatID));
-	if (!HTTPClient::GET(sURL, sResult))
-	{
-		Log(LOG_ERROR, "Error getting thermostat data!");
-		m_bDoLogin = true;
-		return false;
-	}
-
-	sURL = ATAGONE_URL_LATEST_REPORT;
-	stdreplace(sURL, "{0}", CURLEncode::URLEncode(ThermostatID));
-
-	if (!HTTPClient::GET(sURL, ExtraHeaders, sResult, ResponseHeaders))
-	{
-		Log(LOG_ERROR, "Error getting thermostat data! (%s)", ResponseHeaders[0].c_str());
-		m_bDoLogin = true;
-		return false;
-	}
-
-	//Extract all values from the HTML page, and put them in a json array
-	Json::Value root;
-	std::string sret;
-	sret = GetHTMLPageValue(sResult, "Kamertemperatuur|Room temperature|Raumtemperatur", true);
-	if (sret.empty())
-	{
-		Log(LOG_ERROR, "Invalid/no data received (1)...");
-		return false;
-	}
-	root["roomTemperature"] = static_cast<float>(atof(sret.c_str()));
-	//root["deviceAlias"] = GetHTMLPageValue(sResult, "Apparaat alias|Device alias", false);
-	//root["latestReportTime"] = GetHTMLPageValue(sResult, "Laatste rapportagetijd|Latest report time", false);
-	//root["connectedTo"] = GetHTMLPageValue(sResult, "Verbonden met|Connected to", false);
-	root["burningHours"] = static_cast<float>(atof(GetHTMLPageValue(sResult, "Branduren|Burning hours", true).c_str()));
-	//root["boilerHeatingFor"] = GetHTMLPageValue(sResult, "Ketel in bedrijf voor|Boiler heating for", false);
-	sret = GetHTMLPageValue(sResult, "Brander status|Flame status|Brennerstatus", false);
-	root["flameStatus"] = ((sret == "Aan") || (sret == "On") || (sret == "An")) ? true : false;
-	root["outsideTemperature"] = static_cast<float>(atof(GetHTMLPageValue(sResult, "Buitentemperatuur|Outside temperature|Au&#223;entemperatur", true).c_str()));
-	root["dhwSetpoint"] = static_cast<float>(atof(GetHTMLPageValue(sResult, "Setpoint warmwater|DHW setpoint", true).c_str()));
-	root["dhwWaterTemperature"] = static_cast<float>(atof(GetHTMLPageValue(sResult, "Warmwatertemperatuur|DHW water temperature|Warmwassertemperatur", true).c_str()));
-	root["chSetpoint"] = static_cast<float>(atof(GetHTMLPageValue(sResult, "Setpoint cv|CH setpoint", true).c_str()));
-	root["chWaterTemperature"] = static_cast<float>(atof(GetHTMLPageValue(sResult, "CV-aanvoertemperatuur|CH water temperature", true).c_str()));
-	root["chWaterPressure"] = static_cast<float>(atof(GetHTMLPageValue(sResult, "CV-waterdruk|CH water pressure|Anlagendruck", true).c_str()));
-	root["chReturnTemperature"] = static_cast<float>(atof(GetHTMLPageValue(sResult, "CV retourtemperatuur|CH return temperature|HZ R&#252;cklauftemperatur", true).c_str()));
-
-	// We have to do an extra call to get the target temperature.
-	sURL = ATAGONE_URL_UPDATE_DEVICE_CONTROL;
-	stdreplace(sURL, "{0}", CURLEncode::URLEncode(ThermostatID));
-	if (!HTTPClient::GET(sURL, sResult))
-	{
-		Log(LOG_ERROR, "Error getting target setpoint data!");
-		m_bDoLogin = true;
-		return false;
-	}
-
-	Json::Value root2;
-	bool ret = ParseJSon(sResult, root2);
-	if ((!ret) || (!root2.isObject()))
-	{
-		Log(LOG_ERROR, "Invalid/no data received (2)...");
-		return false;
-	}
-	if (root2["targetTemp"].empty())
-	{
-		Log(LOG_ERROR, "Invalid/no data received (3)...");
-		return false;
-	}
-	root["targetTemperature"] = static_cast<float>(atof(root2["targetTemp"].asString().c_str()));
-	root["currentMode"] = root2["currentMode"].asString();
-	root["vacationPlanned"] = root2["vacationPlanned"].asBool();
-
 	//Handle the Values
 	float temperature;
-	temperature = (float)root["targetTemperature"].asFloat();
+	temperature = (float)retrievedData["report"]["details"]["target_temp"].asFloat();
 	SendSetPointSensor(0, 0, 0, 1, 1, 255, temperature, "Room Setpoint");
 
-	temperature = (float)root["roomTemperature"].asFloat();
-	SendTempSensor(2, 255, temperature, "room Temperature");
+	temperature = (float)retrievedData["report"]["room_temp"].asFloat();
+	SendTempSensor(2, 255, temperature, "Room Temperature");
 
-	if (!root["outsideTemperature"].empty())
+	if (!retrievedData["report"]["outside_temp"].empty())
 	{
-		temperature = (float)root["outsideTemperature"].asFloat();
-		SendTempSensor(3, 255, temperature, "outside Temperature");
+		temperature = (float)retrievedData["report"]["outside_temp"].asFloat();
+		SendTempSensor(3, 255, temperature, "Outside Temperature");
 	}
 
 	//DHW
-	if (!root["dhwSetpoint"].empty())
+	if (!retrievedData["control"]["dhw_temp_setp"].empty())
 	{
-		temperature = (float)root["dhwSetpoint"].asFloat();
+		temperature = (float)retrievedData["control"]["dhw_temp_setp"].asFloat();
 		SendSetPointSensor(0, 0, 0, 2, 1, 255, temperature, "DHW Setpoint");
 	}
-	if (!root["dhwWaterTemperature"].empty())
+	if (!retrievedData["report"]["dhw_water_temp"].empty())
 	{
-		temperature = (float)root["dhwWaterTemperature"].asFloat();
+		temperature = (float)retrievedData["report"]["dhw_water_temp"].asFloat();
 		SendTempSensor(4, 255, temperature, "DHW Temperature");
 	}
 	//CH
-	if (!root["chSetpoint"].empty())
+	if (!retrievedData["report"]["ch_setpoint"].empty())
 	{
-		temperature = (float)root["chSetpoint"].asFloat();
+		temperature = (float)retrievedData["report"]["ch_setpoint"].asFloat();
 		SendSetPointSensor(0, 0, 0, 3, 1, 255, temperature, "CH Setpoint");
 	}
-	if (!root["chWaterTemperature"].empty())
+	if (!retrievedData["report"]["ch_water_temp"].empty())
 	{
-		temperature = (float)root["chWaterTemperature"].asFloat();
+		temperature = (float)retrievedData["report"]["ch_water_temp"].asFloat();
 		SendTempSensor(5, 255, temperature, "CH Temperature");
 	}
-	if (!root["chWaterPressure"].empty())
+	if (!retrievedData["report"]["ch_water_pres"].empty())
 	{
-		float pressure = (float)root["chWaterPressure"].asFloat();
-		SendPressureSensor(1, 1, 255, pressure, "Pressure");
+		float pressure = (float)retrievedData["report"]["ch_water_pres"].asFloat();
+		SendPressureSensor(1, 1, 255, pressure, "CH Water Pressure");
 	}
-	if (!root["chReturnTemperature"].empty())
+	if (!retrievedData["report"]["ch_return_temp"].empty())
 	{
-		temperature = (float)root["chReturnTemperature"].asFloat();
+		temperature = (float)retrievedData["report"]["ch_return_temp"].asFloat();
 		SendTempSensor(6, 255, temperature, "CH Return Temperature");
 	}
-
-	if (!root["currentMode"].empty())
+	if (!retrievedData["report"]["details"]["rel_mod_level"].empty())
 	{
-		std::string actSource = root["currentMode"].asString();
+		float relModLevel = (float)retrievedData["report"]["details"]["rel_mod_level"].asFloat();
+		SendPercentageSensor(1, 1, 255, relModLevel, "Relative Modulation Level");
+	}
+	/*
+	if (!retrievedData["currentMode"].empty())
+	{
+		std::string actSource = retrievedData["currentMode"].asString();
 		bool bIsScheduleMode = (actSource == "schedule_active");
 		SendSwitch(1, 1, 255, bIsScheduleMode, 0, "Thermostat Schedule Mode", m_Name);
 	}
-	if (!root["flameStatus"].empty())
+	if (!retrievedData["flameStatus"].empty())
 	{
-		SendSwitch(2, 1, 255, root["flameStatus"].asBool(), 0, "Flame Status", m_Name);
+		SendSwitch(2, 1, 255, retrievedData["flameStatus"].asBool(), 0, "Flame Status", m_Name);
 	}
+	*/	
 	return true;
 }
-*/
 
 bool CAtagOneLocal::LoginThermostat()
 {
@@ -416,31 +330,7 @@ bool CAtagOneLocal::LoginThermostat()
 	// Login to the thermostat using HTTP POST at port 10000
 	sURL = "http://" + m_IPaddress + ":10000/pair_message";
 	
-	// Prepare the POST body with device ID, username and password
-	/*
-	Json::Value jPostData;
-	jPostData["pair_message"] = Json::objectValue;
-	jPostData["pair_message"]["account_auth"] = Json::objectValue;
-	jPostData["pair_message"]["account_auth"]["user_account"] = "";		// We leave it empty for local login
-	jPostData["pair_message"]["account_auth"]["mac_address"] = m_MacAddress;
-	jPostData["pair_message"]["accounts"] = Json::objectValue;
-	jPostData["pair_message"]["accounts"]["entries"] = Json::arrayValue;
-	Json::Value jPostEntry = Json::objectValue;
-	jPostEntry["user_account"] = ""; // We leave it empty for local login
-	jPostEntry["mac_address"] = sMacAddress;
-	jPostEntry["device_name"] = sDeviceName;
-	jPostEntry["account_type"] = 0;	//
-	jPostData["pair_message"]["accounts"]["entries"].append(jPostEntry);
-	jPostData["pair_message"]["seqnr"] = 0;
-	
-	Json::StreamWriterBuilder jswBuilder;
-	jswBuilder["indentation"] = "";     // no pretty-print whitespace
-	jswBuilder["emitUTF8"] = true;       // optional, keeps UTF-8
-	//jswBuilder["enableYAMLCompatibility"] = true; // optional, stable ordering in some builds
-
-	const std::string sPostData = Json::writeString(jswBuilder, jPostData);
-	*/
-	// We build the JSON string manually to ensure order of elements as expected by the thermostat
+	// Build the JSON string manually to ensure order of elements as expected by the thermostat
 	const std::string sPostData =
     "{\"pair_message\":{"
     "\"seqnr\":0,"
@@ -460,10 +350,6 @@ bool CAtagOneLocal::LoginThermostat()
 	Debug(DEBUG_HARDWARE, "POST data to thermostat: %s", sPostData.c_str());
 
 	ExtraHeaders.push_back("Content-Type: application/x-www-form-urlencoded");
-	//ExtraHeaders.push_back("User-Agent: Mozilla/5.0 (compatible; AtagOneAPI/1.0.0(2026-01-01); https://atag.one/)");
-	//ExtraHeaders.push_back("X-OneApp-Version: 1.0.0(2026-01-01)");
-	//ExtraHeaders.push_back("Accept-Charset: UTF-8");
-	//ExtraHeaders.push_back("Accept: */*");
 
 	std::string sHTTPReturn;
 	if (!HTTPClient::POST(sURL, sPostData, ExtraHeaders, sHTTPReturn, ResponseHeaders))
@@ -514,20 +400,6 @@ bool CAtagOneLocal::FindThermostat()
 
 bool CAtagOneLocal::WriteToHardware(const char *pdata, const unsigned char /*length*/)
 {
-	const tRBUF *pCmd = reinterpret_cast<const tRBUF *>(pdata);
-	if (pCmd->LIGHTING2.packettype == pTypeLighting2)
-	{
-		//Light command
-
-		int node_id = pCmd->LIGHTING2.id4;
-		bool bIsOn = (pCmd->LIGHTING2.cmnd == light2_sOn);
-		if (node_id == 1)
-		{
-			//Pause Switch
-			//SetPauseStatus(bIsOn);
-			return true;
-		}
-	}
 	return false;
 }
 
@@ -539,35 +411,21 @@ void CAtagOneLocal::SetSetpoint(const int idx, const float temp)
 		return;
 	}
 
-	int rtemp = int(temp * 2.0F);
-	float dtemp = float(rtemp) / 2.0F;
-	if (
-		(dtemp<ATAGONE_TEMPERATURE_MIN) ||
-		(dtemp>ATAGONE_TEMPERATURE_MAX)
-		)
-	{
-		Log(LOG_ERROR, "Temperature should be between %d and %d!", ATAGONE_TEMPERATURE_MIN, ATAGONE_TEMPERATURE_MAX);
-		return;
-	}
-	char szTemp[20];
-	sprintf(szTemp, "%.1f", dtemp);
-	std::string sTemp = szTemp;
-
-	SendSetPointSensor(0, 0, 0, (const uint8_t)idx, 1, 255, dtemp, "");
-}
-
-bool CAtagOneLocal::SetCentralHeatingSetpoint(float temperature)
-{
-    if (temperature < ATAGONE_TEMPERATURE_MIN || temperature > ATAGONE_TEMPERATURE_MAX)
+    if (temp < ATAGONE_TEMPERATURE_MIN || temp > ATAGONE_TEMPERATURE_MAX)
     {
-        Log(LOG_ERROR, "Temperature out of range [%d, %d]", ATAGONE_TEMPERATURE_MIN, ATAGONE_TEMPERATURE_MAX);
-        return false;
+        Log(LOG_ERROR, "Setpoint temperature out of range [%d, %d]!", ATAGONE_TEMPERATURE_MIN, ATAGONE_TEMPERATURE_MAX);
+        return;
     }
 
-    std::string sURL = "http://" + m_IPaddress + ":10000/update";
-    
-    // Round to half degree (0.5 precision)
-    float rounded = std::round(temperature * 2.0f) / 2.0f;
+	std::string sResult;
+	std::string sURL;
+ 	std::vector<std::string> ExtraHeaders;
+	std::vector<std::string> ResponseHeaders;
+
+	sURL = "http://" + m_IPaddress + ":10000/update";
+
+	// Round to half degree (0.5 precision)
+    float rounded = std::round(temp * 2.0f) / 2.0f;
     
     // Build compact JSON payload
     std::ostringstream oss;
@@ -585,35 +443,34 @@ bool CAtagOneLocal::SetCentralHeatingSetpoint(float temperature)
         "}"
         "}}";
 
-    std::vector<std::string> ExtraHeaders;
-    ExtraHeaders.push_back("Content-Type: application/x-www-form-urlencoded; UTF-8");
-    ExtraHeaders.push_back("User-Agent: Mozilla/5.0 (compatible; AtagOneAPI/1.0.0; https://atag.one/)");
-    ExtraHeaders.push_back("Accept-Charset: UTF-8");
+	Debug(DEBUG_HARDWARE, "POST data to thermostat: %s", sPostData.c_str());
 
-    std::string sHTTPReturn;
-    std::vector<std::string> ResponseHeaders;
-    
-    if (!HTTPClient::POST(sURL, sPostData, ExtraHeaders, sHTTPReturn, ResponseHeaders))
-    {
-        Log(LOG_ERROR, "Error sending setpoint to thermostat");
-        return false;
-    }
+	ExtraHeaders.push_back("Content-Type: application/x-www-form-urlencoded");
 
-    // Parse response
+	std::string sHTTPReturn;
+	if (!HTTPClient::POST(sURL, sPostData, ExtraHeaders, sHTTPReturn, ResponseHeaders))
+	{
+		Log(LOG_ERROR, "Error connecting to thermostat at %s!", m_IPaddress.c_str());
+		return;
+	}
+
+	// Parse response
     Json::Value root;
     if (!ParseJSon(sHTTPReturn, root) || !root.isMember("update_reply"))
     {
-        Log(LOG_ERROR, "Invalid response from setpoint update");
-        return false;
+        Log(LOG_ERROR, "Invalid response from setpoint update!");
+		Debug(DEBUG_HARDWARE, "Received invalid response: .%s.", sHTTPReturn.c_str());
+        return;
     }
 
     Json::Value reply = root["update_reply"];
     if (reply.isMember("acc_status") && reply["acc_status"].asInt() != ATAGONE_ACC_STATUS_OK)
     {
         Log(LOG_ERROR, "Thermostat rejected setpoint update (acc_status=%d)", reply["acc_status"].asInt());
-        return false;
+        return;
     }
 
-    Log(LOG_STATUS, "Central heating setpoint set to %.1f°C", rounded);
-    return true;
+    Debug(DEBUG_HARDWARE, "Central heating setpoint set to %.1f°C", rounded);
+
+	SendSetPointSensor(0, 0, 0, (const uint8_t)idx, 1, 255, rounded, "");
 }

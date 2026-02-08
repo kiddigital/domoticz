@@ -9,7 +9,6 @@ public:
 	~CAtagOneLocal() override = default;
 	bool WriteToHardware(const char *pdata, unsigned char length) override;
 	void SetSetpoint(int idx, float temp);
-	bool SetCentralHeatingSetpoint(float temperature);
 
 private:
 	void Init();
@@ -20,6 +19,7 @@ private:
 	bool GetDeviceDetails();
 	bool LoginThermostat();
 	bool FindThermostat();
+	bool ProcessDeviceDetails(const Json::Value &retrievedData);
 
 	int m_LastMinute;
 	bool m_bFoundThermostat;
