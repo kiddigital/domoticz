@@ -14,8 +14,8 @@ Author: kiddigital (github.com/kiddigital)
 #include "Helper.h"
 #include "SQLHelper.h"
 #include "mainworker.h"
-#include "../webserver/cWebem.h"
-#include "../webserver/reply.hpp"
+#include <libwebem/cWebem.h>
+#include <libwebem/reply.h>
 #include <sstream>
 #include <string>
 
