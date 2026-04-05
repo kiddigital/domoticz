@@ -7,6 +7,7 @@
 #include "../main/RFXtrx.h"
 #include "../main/SQLHelper.h"
 #include "../httpclient/HTTPClient.h"
+#include "../httpclient/sock_port.h"
 #include "../main/mainworker.h"
 #include "../main/json_helper.h"
 
@@ -387,15 +388,97 @@ bool CAtagOneLocal::LoginThermostat()
 
 bool CAtagOneLocal::FindThermostat()
 {
-	m_DeviceID = "";
-	// Search for the thermostat on the given IP address
-	// To-Do: implement actual discovery mechanism by listening for UDP message on port 11000
-	// For now, we just assume the thermostat is at a fixed IP address
-	m_IPaddress = "172.16.0.253";
-	m_DeviceID = "6808-1500-1808_17-41-001-295";
-	Debug(DEBUG_HARDWARE, "Thermostat %sfound %s", (m_DeviceID.empty() ? "not " : ""), (m_DeviceID.empty() ? "" : "(" + m_DeviceID + ")").c_str());
+	// m_IPaddress = "172.16.0.253";
+	// m_DeviceID = "6808-1500-1808_17-41-001-295";
+	constexpr unsigned short atagDiscoveryPort = 11000;
+	constexpr int discoveryTimeoutSeconds = 15;
+	constexpr size_t discoveryMessageSize = 37;
+	constexpr size_t deviceIdOffset = 4;
+	constexpr size_t deviceIdLength = 33;
 
-	return (!m_DeviceID.empty());
+	m_IPaddress.clear();
+	m_DeviceID.clear();
+
+	SOCKET sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	if (sock == INVALID_SOCKET)
+	{
+		Log(LOG_ERROR, "Atag One: unable to create UDP discovery socket (error=%d)", SOCKET_ERRNO);
+		return false;
+	}
+
+	int reuseAddr = 1;
+	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<const char*>(&reuseAddr), sizeof(reuseAddr)) == SOCKET_ERROR)
+	{
+		Debug(DEBUG_HARDWARE, "Atag One: failed to enable SO_REUSEADDR on discovery socket (error=%d)", SOCKET_ERRNO);
+	}
+
+	sockaddr_in listenAddr = {};
+	listenAddr.sin_family = AF_INET;
+	listenAddr.sin_port = htons(atagDiscoveryPort);
+	listenAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+
+	if (bind(sock, reinterpret_cast<sockaddr*>(&listenAddr), sizeof(listenAddr)) == SOCKET_ERROR)
+	{
+		Log(LOG_ERROR, "Atag One: unable to bind UDP discovery socket to port %u (error=%d)", atagDiscoveryPort, SOCKET_ERRNO);
+		closesocket(sock);
+		return false;
+	}
+
+	time_t deadline = mytime(nullptr) + discoveryTimeoutSeconds;
+	while (!IsStopRequested(0) && mytime(nullptr) < deadline)
+	{
+		fd_set readSet;
+		FD_ZERO(&readSet);
+		FD_SET(sock, &readSet);
+
+		timeval timeout = {};
+		timeout.tv_sec = 1;
+
+		int selectResult = select(static_cast<int>(sock) + 1, &readSet, nullptr, nullptr, &timeout);
+		if (selectResult == 0)
+		{
+			continue;
+		}
+		if (selectResult == SOCKET_ERROR)
+		{
+			Log(LOG_ERROR, "Atag One: discovery socket wait failed (error=%d)", SOCKET_ERRNO);
+			break;
+		}
+
+		sockaddr_in senderAddr = {};
+		socklen_t senderAddrLen = sizeof(senderAddr);
+		char buffer[64];
+		int received = recvfrom(sock, buffer, sizeof(buffer) - 1, 0, reinterpret_cast<sockaddr*>(&senderAddr), &senderAddrLen);
+		if (received <= 0)
+		{
+			Debug(DEBUG_HARDWARE, "Atag One: empty UDP discovery packet received");
+			continue;
+		}
+
+		buffer[received] = '\0';
+		if ((static_cast<size_t>(received) < discoveryMessageSize) || (strncmp(buffer, "ONE ", deviceIdOffset) != 0))
+		{
+			Debug(DEBUG_HARDWARE, "Atag One: ignoring UDP packet on discovery port with unexpected payload '%s'", buffer);
+			continue;
+		}
+
+		char senderIp[INET_ADDRSTRLEN] = {};
+		if (inet_ntop(AF_INET, &senderAddr.sin_addr, senderIp, sizeof(senderIp)) == nullptr)
+		{
+			Log(LOG_ERROR, "Atag One: failed to decode thermostat IP address from discovery packet");
+			continue;
+		}
+
+		m_DeviceID.assign(buffer + deviceIdOffset, deviceIdLength);
+		m_IPaddress = senderIp;
+		Debug(DEBUG_HARDWARE, "Atag One thermostat discovered at %s with DeviceID %s", m_IPaddress.c_str(), m_DeviceID.c_str());
+		closesocket(sock);
+		return true;
+	}
+
+	closesocket(sock);
+	Debug(DEBUG_HARDWARE, "Atag One thermostat not found via UDP discovery on port %u", atagDiscoveryPort);
+	return false;
 }
 
 bool CAtagOneLocal::WriteToHardware(const char *pdata, const unsigned char /*length*/)
